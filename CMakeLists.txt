@@ -20,11 +20,17 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #set(EVENT__DISABLE_SAMPLES ON)
 #set(EVENT__DISABLE_TESTS ON)
 
-add_subdirectory(libevent)
+
 add_subdirectory(stomptalk)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
-include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
+
+option(CAPSTOMP_STATIC_LIBEVENT "add static libevent" ON)
+if (CAPSTOMP_STATIC_LIBEVENT)
+    set(EVENT__LIBRARY_TYPE "STATIC")
+    add_subdirectory(libevent)
+    include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
+endif()
 
 add_subdirectory(stompconn)
 
@@ -33,7 +39,10 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
+set(CAPSTOMP_SOCKET_SLOTS "10" CACHE STRING "socket slots" FORCE)
+
 add_definitions(-DCAPSTOMP_REVISION=${FILE_VER})
+add_definitions(-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS})
 
 set(sources
     src/capstomp.cpp
@@ -42,10 +51,10 @@ set(sources
 )
 
 include_directories("/usr/include/mysql")
-
+add_definitions("-DHAVE_DLOPEN")
 add_library(capstomp SHARED ${sources})
 
-option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" ON)
+option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" OFF)
 
 if (CAPSTOMP_STATIC_STDCPP)
     target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a event stomptalk stompconn)

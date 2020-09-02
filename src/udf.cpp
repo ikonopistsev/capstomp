@@ -3,10 +3,9 @@
 #include <array>
 #include "mysql.hpp"
 
-
 // журнал работы
 static const capstomp::journal j;
-static std::array<capstomp::connection, 10> connarr;
+static std::array<capstomp::connection, CAPSTOMP_SOCKET_SLOTS> connarr;
 
 my_bool capstomp_json_init(capstomp::connection& conn, UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
