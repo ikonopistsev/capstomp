@@ -1,0 +1,43 @@
+--- 
+jobs: 
+  job: 
+    name: "${{ matrix.os }}-hosted-basic"
+    runs-on: "${{ matrix.os }}"
+    steps: 
+      - 
+        uses: actions/checkout@master
+        with:
+          submodules: true
+      - 
+        uses: lukka/get-cmake@latest
+      - 
+        name: "Restore from cache and run vcpkg"
+        uses: lukka/run-vcpkg@v3
+        with: 
+          appendedCacheKey: "${{ hashFiles(env.vcpkgResponseFile) }}"
+          vcpkgArguments: '${{ matrix.vcpkgPackages }}'
+          vcpkgTriplet: '${{ matrix.triplet }}'
+          vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
+          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
+      - 
+        name: "Build with CMake and Ninja"
+        uses: lukka/run-cmake@v2
+        with: 
+          buildDirectory: "${{ runner.workspace }}/b/ninja"
+          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON -DEVENT__DISABLE_MBEDTLS=ON -DEVENT__DISABLE_OPENSSL=NO -DEVENT__LIBRARY_TYPE=STATIC -DEVENT__DISABLE_BENCHMARK=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_SAMPLES=ON -DEVENT__DISABLE_TESTS=ON"
+          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+          cmakeListsTxtPath: "${{ github.workspace }}/CMakeLists.txt"
+          useVcpkgToolchainFile: true
+    strategy: 
+      fail-fast: false
+      matrix: 
+        include: 
+          - 
+            os: ubuntu-latest
+            triplet: x64-linux
+            vcpkgCommitId: 8a9a97315aefb3f8bc5d81bf66ca0025938b9c91
+            vcpkgPackages: sqlite3
+        os: 
+          - ubuntu-latest
+name: linux
+on: [push]
