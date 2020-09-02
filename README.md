@@ -76,4 +76,4 @@ Sends a plain text `message` to the given `exchange` on the provided `hostname` 
 
 Upon succes, this function returns a number containing the size of sending data.
 
-`Based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)`
+> Based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
