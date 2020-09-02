@@ -343,6 +343,7 @@ extern "C" void capstomp_json09_deinit(UDF_INIT* initid)
 extern "C" my_bool capstomp_json10_init(UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
 {
+    static_assert (9 < CAPSTOMP_SOCKET_SLOTS, "need more socket slots");
     return capstomp_json_init(connarr[9], initid, args, msg);
 }
 
