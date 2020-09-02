@@ -33,10 +33,12 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
+add_definitions(-DCAPSTOMP_REVISION=${FILE_VER})
+
 set(sources
-    src/udf.cpp
     src/capstomp.cpp
     src/journal.cpp
+    src/udf.cpp
 )
 
 include_directories("/usr/include/mysql")
