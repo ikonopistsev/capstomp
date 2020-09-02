@@ -64,13 +64,14 @@ mysql> SELECT capstomp_json01(61613, 'guest', 'guest', '', '/exchange/udf/test',
 
 ### `capstomp_json01(port|"addr:port", user, passcode, vhost, destination, json-data [, stomp-header...])`
 
-Sends a plain text `message` to the given `exchange` on the provided `hostname` and `port` with the supplied `routingKey` as `username` identified by `password`.
+Sends a `json-data` to the given `destination` on the provided `addr:port` or `port` as `user` identified by `passcode`.
 
 #### Parameters
 
 * `port` (integer) or addr:port (string). "localhost:61613" try to use only local connections!
 * `destination` (string). [STOMP exchange or queue](https://www.rabbitmq.com/stomp.html#d).
 * `json-data` (string). The body of the message (typically json but it may any string).
+* `stomp-header` (mostly string). round(unix_timestamp(now(4))*1000) as 'timestamp' will add to STOMP header timestamp=1599081164296
 
 #### Returns
 
