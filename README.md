@@ -71,7 +71,7 @@ Sends a `json-data` to the given `destination` on the provided `addr:port` or `p
 * `port` (integer) or addr:port (string). "localhost:61613" try to use only local connections!
 * `destination` (string). [STOMP exchange or queue](https://www.rabbitmq.com/stomp.html#d).
 * `json-data` (string). The body of the message (typically json but it may any string).
-* `stomp-header` (mostly string). round(unix_timestamp(now(4))*1000) as 'timestamp' will add to STOMP header timestamp=1599081164296
+* `stomp-header` (mostly string). `round(unix_timestamp(now(4))*1000) as 'timestamp'` will add to STOMP header `timestamp=1599081164296`
 
 #### Returns
 
