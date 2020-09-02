@@ -81,6 +81,55 @@ my_bool capstomp_json_init(capstomp::connection& conn, UDF_INIT* initid,
     return 1;
 }
 
+bool capstomp_push_header(stompconn::send& frame, UDF_ARGS* args)
+{
+    using stomptalk::header::detect;
+
+    bool content_type = false;
+    for (int i = 6; i < args->arg_count; ++i)
+    {
+        auto key_ptr = args->attributes[i];
+        auto key_size = args->attribute_lengths[i];
+        auto val_ptr = args->args[i];
+        auto val_size = args->lengths[i];
+        if (key_ptr && key_size && val_ptr && val_size)
+        {
+            // проверяем есть ли кастомный content_type
+            std::string_view key(key_ptr, key_size);
+            if (detect(stomptalk::header::tag::content_type(), key))
+                content_type = true;
+
+            auto type = args->arg_type[i];
+            switch (type)
+            {
+            case REAL_RESULT: {
+                stomptalk::header::custom hdr(std::string(key_ptr, key_size),
+                    std::to_string(*reinterpret_cast<double*>(val_ptr)));
+                frame.push(hdr);
+                break;
+            }
+            case INT_RESULT: {
+                stomptalk::header::custom hdr(std::string(key_ptr, key_size),
+                    std::to_string(*reinterpret_cast<long long*>(val_ptr)));
+                frame.push(hdr);
+                break;
+            }
+            case STRING_RESULT:
+            case DECIMAL_RESULT: {
+                std::string_view key(key_ptr, key_size);
+                std::string_view val(val_ptr, val_size);
+                stomptalk::header::fixed hdr(key, val);
+                frame.push(hdr);
+                break;
+            }
+            default:;
+            }
+        }
+    }
+
+    return content_type;
+}
+
 // "capstomp_json(port|addr:port, user, passcode, vhost, dest, json-data[, param])",
 long long capstomp_json(capstomp::connection& conn, UDF_INIT*,
     UDF_ARGS* args, char* is_null, char* error)
@@ -89,7 +138,8 @@ long long capstomp_json(capstomp::connection& conn, UDF_INIT*,
     {
         std::string_view destination(args->args[4], args->lengths[4]);
         stompconn::send frame(destination);
-        frame.push(stomptalk::header::content_type_json());
+        if (!capstomp_push_header(frame, args))
+            frame.push(stomptalk::header::content_type_json());
         btpro::buffer payload;
         payload.append_ref(args->args[5], args->lengths[5]);
         frame.payload(std::move(payload));
