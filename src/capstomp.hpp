@@ -52,6 +52,7 @@ class connection
     std::mutex mutex_{};
     bool own_lock_{false};
     std::size_t endpoint_{};
+    int timeout_{10000};
 public:
 
     connection();
@@ -70,6 +71,8 @@ public:
     }
 
     void unlock();
+
+    void set_timeout(int timeout) noexcept;
 
 private:
 

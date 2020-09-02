@@ -4,7 +4,7 @@
 namespace capstomp {
 
 destination::destination(std::string_view login, std::string_view passcode,
-                         std::string_view vhost, const btpro::ipv4::addr& addr)
+    std::string_view vhost, const btpro::ipv4::addr& addr)
     : login_(login)
     , passcode_(passcode)
     , vhost_(vhost)
@@ -73,8 +73,7 @@ void connection::connect(const destination& dest)
         // сбрасываем ошибку
         error_.clear();
 
-        // 10 секунд на подключение
-        logon(dest, 10000);
+        logon(dest, timeout_);
 
         if (!error_.empty())
             throw std::runtime_error(error_);
@@ -112,6 +111,11 @@ void connection::unlock()
         own_lock_ = false;
         mutex_.unlock();
     }
+}
+
+void connection::set_timeout(int timeout) noexcept
+{
+    timeout_ = timeout;
 }
 
 void connection::logon(const destination& dest, int timeout)
