@@ -24,7 +24,7 @@ jobs:
         uses: lukka/run-cmake@v2
         with: 
           buildDirectory: "${{ runner.workspace }}/b/ninja"
-          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON -DEVENT__DISABLE_MBEDTLS=ON -DEVENT__DISABLE_OPENSSL=NO -DEVENT__LIBRARY_TYPE=STATIC -DEVENT__DISABLE_BENCHMARK=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_SAMPLES=ON -DEVENT__DISABLE_TESTS=ON"
+          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON -DEVENT__DISABLE_OPENSSL=NO -DEVENT__LIBRARY_TYPE=STATIC -DEVENT__DISABLE_BENCHMARK=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_SAMPLES=ON -DEVENT__DISABLE_TESTS=ON"
           cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
           cmakeListsTxtPath: "${{ github.workspace }}/CMakeLists.txt"
           useVcpkgToolchainFile: true
