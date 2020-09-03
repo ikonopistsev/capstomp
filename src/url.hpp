@@ -33,15 +33,41 @@ class url
 
     void split_addr(std::string_view addr) noexcept
     {
-        auto i = addr.find(':');
-        if (i == npos)
+        if (!addr.empty())
         {
-            host_ = addr;
-        }
-        else
-        {
-            host_ = addr.substr(0, i);
-            port_ = addr.substr(i + 1);
+            //detect ipv6
+            if (addr[0] == '[')
+            {
+                auto f = addr.find(']');
+                if (f != npos)
+                {
+                    auto i = addr.find(':', f);
+                    if (i == npos)
+                    {
+                        host_ = addr;
+                    }
+                    else
+                    {
+                        host_ = addr.substr(0, i);
+                        port_ = addr.substr(i + 1);
+                    }
+                }
+                else
+                    host_ = addr;
+            }
+            else
+            {
+                auto i = addr.find(':');
+                if (i == npos)
+                {
+                    host_ = addr;
+                }
+                else
+                {
+                    host_ = addr.substr(0, i);
+                    port_ = addr.substr(i + 1);
+                }
+           }
         }
     }
 

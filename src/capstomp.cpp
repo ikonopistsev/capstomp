@@ -40,7 +40,7 @@ void connection::connect(std::string_view uri)
         url u(uri);
         btpro::sock_addr addr(u.addr());
 
-        auto fd = ::socket(AF_INET, SOCK_STREAM, 0);
+        auto fd = ::socket(addr.family(), SOCK_STREAM, 0);
         if (btpro::code::fail == fd)
             throw std::system_error(btpro::net::error_code(), "socket");
 
