@@ -86,7 +86,9 @@ Same as `capstomp` but it add `content-type=application/json` header to each mes
 
 Sends a `json-data` using specific socket.
 
-#### Parameters
+### `capstomp_json(uri, destination, socket, json-data [, stomp-header...])`
+
+Sends a `json-data` using specific socket with `content-type=application/json` header per message.
 
 * `socket` (integer). Number of persisten connection (buy default library profide 32 sockets, 0-31). You may change socket pool size: `-DCAPSTOMP_SOCKET_SLOTS=64`
 
