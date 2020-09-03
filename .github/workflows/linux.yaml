@@ -24,7 +24,7 @@ jobs:
         uses: lukka/run-cmake@v2
         with: 
           buildDirectory: "${{ runner.workspace }}/b/ninja"
-          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON -DEVENT__DISABLE_OPENSSL=NO -DEVENT__LIBRARY_TYPE=STATIC -DEVENT__DISABLE_BENCHMARK=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_REGRESS=ON -DEVENT__DISABLE_SAMPLES=ON -DEVENT__DISABLE_TESTS=ON"
+          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON"
           cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
           cmakeListsTxtPath: "${{ github.workspace }}/CMakeLists.txt"
           useVcpkgToolchainFile: true
@@ -36,7 +36,7 @@ jobs:
             os: ubuntu-latest
             triplet: x64-linux
             vcpkgCommitId: 8a9a97315aefb3f8bc5d81bf66ca0025938b9c91
-            vcpkgPackages: sqlite3
+            vcpkgPackages: libevent
         os: 
           - ubuntu-latest
 name: linux
