@@ -3,12 +3,12 @@
 #include <syslog.h>
 #include <cassert>
 
-using namespace capstomp;
+using namespace cs;
 
 journal::journal() noexcept
     : mask_(LOG_UPTO(LOG_NOTICE))
 {
-    openlog("captor", LOG_ODELAY, LOG_USER);
+    openlog("capstomp", LOG_ODELAY, LOG_USER);
     // нет смысла делать setlogmask
     // тк проверку уровня лога делаем мы сами
 }

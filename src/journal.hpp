@@ -1,6 +1,6 @@
 #pragma once
 
-namespace capstomp {
+namespace cs {
 
 class journal
 {

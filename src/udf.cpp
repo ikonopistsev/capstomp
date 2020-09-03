@@ -1,67 +1,121 @@
 #include "capstomp.hpp"
 #include "journal.hpp"
 #include <array>
+#include <thread>
 #include "mysql.hpp"
 
 // журнал работы
-static const capstomp::journal j;
-static std::array<capstomp::connection, CAPSTOMP_SOCKET_SLOTS> connarr;
+static const cs::journal j;
 
-my_bool capstomp_json_init(capstomp::connection& conn, UDF_INIT* initid,
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+struct version
+{
+    version() noexcept
+    {
+        j.cout([]{
+            auto text = std::mkstr(std::cref("ver: "));
+            text += STR(CAPSTOMP_PLUGIN_VERSION);
+            text += stomptalk::sv(" rev: ");
+            text += STR(CAPSTOMP_PLUGIN_REVISION);
+            return text;
+        });
+    }
+};
+
+#undef STR_HELPER
+#undef STR
+
+static const version v;
+
+static cs::connection* get(std::size_t i)
+{
+    using pool_type = std::array<cs::connection, CAPSTOMP_SOCKET_SLOTS>;
+    static pool_type pool;
+    return &pool.at(i);
+}
+
+//            0          1     2       3           4
+// "capstomp("location", dest, socket, json-data[, param])"
+// "capstomp("location", dest, json-data[, param])"
+// "capstomp_json("location", dest, json-data[, param])"
+// "capstomp_json("location", dest, socket, json-data[, param])"
+extern "C" my_bool capstomp_init(UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
 {
+    cs::connection *conn = nullptr;
+
     try
     {
         auto args_count = args->arg_count;
-        if ((args_count < 6) ||
-            (!(((args->arg_type[0] == INT_RESULT) ||
-                (args->arg_type[0] == STRING_RESULT)) &&
-               (args->arg_type[1] == STRING_RESULT) &&
-               (args->arg_type[2] == STRING_RESULT) &&
-               (args->arg_type[3] == STRING_RESULT) &&
-               (args->arg_type[4] == STRING_RESULT) &&
-               (args->arg_type[5] == STRING_RESULT))))
+        if ((args_count < 3) ||
+            (!((args->arg_type[0] == STRING_RESULT) &&
+               (args->arg_type[1] == STRING_RESULT))))
         {
             strncpy(msg, "bad args type, use "
-                         "capstomp_json(port|addr:port, user, passcode, "
-                         "vhost, dest, json-data[, param])",
-                    MYSQL_ERRMSG_SIZE);
+                "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
+                MYSQL_ERRMSG_SIZE);
             return 1;
         }
 
-        auto addr_val = args->args[0];
-        auto addr_size = args->lengths[0];
-
-        std::string_view user(args->args[1], args->lengths[1]);
-        std::string_view passcode(args->args[2], args->lengths[2]);
-        std::string_view vhost(args->args[3], args->lengths[3]);
-
-        if (!(addr_val && addr_size))
+        std::size_t num = 0;
+        if (args->arg_type[2] == INT_RESULT)
         {
-            strncpy(msg, "bad args, use "
-                         "capstomp_json(port|addr:port, user, passcode, "
-                         "vhost, dest, json-data[, param])",
+            if ((args_count < 4) || (!(args->arg_type[3] == STRING_RESULT)))
+            {
+                strncpy(msg, "bad socket type, use "
+                        "capstomp(\"uri\", \"dest\", socket, \"json-data\"[, param])",
+                        MYSQL_ERRMSG_SIZE);
+                return 1;
+            }
+
+            auto sock_ptr = args->args[2];
+            num = static_cast<std::size_t>(
+                *reinterpret_cast<long long*>(sock_ptr));
+        }
+        else if (args->arg_type[2] != STRING_RESULT)
+        {
+            strncpy(msg, "bad json-data type, use "
+                    "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
                     MYSQL_ERRMSG_SIZE);
             return 1;
-        }
-
-        // парсим адрес
-        btpro::sock_addr addr;
-        auto addr_type = args->arg_type[0];
-        if (addr_type == INT_RESULT)
-        {
-            auto p = static_cast<int>(*reinterpret_cast<long long*>(addr_val));
-            addr.assign(btpro::ipv4::loopback(p));
         }
         else
-            addr.assign(std::string(addr_val, addr_size));
+        {
+            std::hash<std::thread::id> hf;
+            num = hf(std::this_thread::get_id()) % CAPSTOMP_SOCKET_SLOTS;
+        }
 
-        conn.connect(capstomp::destination(user, passcode, vhost, addr));
+#ifdef TRACE_SOCKET_NUM
+        j.cout([&]{
+            std::string text("socket num: ");
+            text += std::to_string(num);
+            text += stomptalk::sv(" of: ");
+            text += std::to_string(CAPSTOMP_SOCKET_SLOTS);
+            return text;
+        });
+#endif
+
+        std::string_view uri(args->args[0], args->lengths[0]);
+        if (uri.empty())
+        {
+            strncpy(msg, "empty uri, use "
+                "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
+                MYSQL_ERRMSG_SIZE);
+            return 1;
+        }
+
+        // получаем соединение
+        conn = get(num);
+        // подключаемся либо повтороно используем соединение
+        conn->connect(uri);
+
         initid->maybe_null = 0;
         initid->const_item = 0;
 
-        // сохраняем сокет
-        initid->ptr = nullptr;
+        // сохраняем
+        initid->ptr = reinterpret_cast<char*>(conn);
 
         return 0;
     }
@@ -74,18 +128,26 @@ my_bool capstomp_json_init(capstomp::connection& conn, UDF_INIT* initid,
         strncpy(msg, "capstomp_json :*(", MYSQL_ERRMSG_SIZE);
     }
 
-    conn.close();
-    conn.unlock();
+    if (conn)
+    {
+        conn->close();
+        conn->unlock();
+    }
 
     return 1;
 }
 
-bool capstomp_push_header(stompconn::send& frame, UDF_ARGS* args)
+//            0          1     2       3           4
+// "capstomp("location", dest, socket, json-data[, param])"
+// "capstomp("location", dest, json-data[, param])"
+bool capstomp_fill_headers(stompconn::send& frame,
+                           UDF_ARGS* args, unsigned int from)
 {
     using stomptalk::header::detect;
+    using content_type = stomptalk::header::tag::content_type;
 
-    bool content_type = false;
-    for (int i = 6; i < args->arg_count; ++i)
+    bool has_content_type = false;
+    for (unsigned int i = from; i < args->arg_count; ++i)
     {
         auto key_ptr = args->attributes[i];
         auto key_size = args->attribute_lengths[i];
@@ -95,8 +157,8 @@ bool capstomp_push_header(stompconn::send& frame, UDF_ARGS* args)
         {
             // проверяем есть ли кастомный content_type
             std::string_view key(key_ptr, key_size);
-            if (detect(stomptalk::header::tag::content_type(), key))
-                content_type = true;
+            if (detect(content_type(), key))
+                has_content_type = true;
 
             auto type = args->arg_type[i];
             switch (type)
@@ -126,23 +188,48 @@ bool capstomp_push_header(stompconn::send& frame, UDF_ARGS* args)
         }
     }
 
-    return content_type;
+    return has_content_type;
 }
 
-// "capstomp_json(port|addr:port, user, passcode, vhost, dest, json-data[, param])",
-long long capstomp_json(capstomp::connection& conn, UDF_INIT*,
-    UDF_ARGS* args, char* is_null, char* error)
+//            0          1     2       3           4
+// "capstomp("location", dest, socket, json-data[, param])"
+// "capstomp("location", dest, json-data[, param])"
+long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
+                   char* is_null, char* error)
 {
     try
     {
-        std::string_view destination(args->args[4], args->lengths[4]);
+        std::string_view destination(args->args[1], args->lengths[1]);
+        if (destination.empty())
+        {
+            j.cerr([&]{
+                return std::mkstr(std::cref("destination empty"));
+            });
+
+            *is_null = 0;
+            *error = 1;
+
+            return 0;
+        }
+
+        // определяем позицию контента
+        unsigned int j = 2;
+        if (args->arg_type[2] == INT_RESULT)
+            j = 3;
+
         stompconn::send frame(destination);
-        if (!capstomp_push_header(frame, args))
-            frame.push(stomptalk::header::content_type_json());
+        if (!capstomp_fill_headers(frame, args, j + 1))
+        {
+            if (json)
+                frame.push(stomptalk::header::content_type_json());
+        }
+
         btpro::buffer payload;
-        payload.append_ref(args->args[5], args->lengths[5]);
+        payload.append_ref(args->args[j], args->lengths[j]);
         frame.payload(std::move(payload));
-        return static_cast<long long>(conn.send(std::move(frame)));
+
+        auto conn = reinterpret_cast<cs::connection*>(initid->ptr);
+        return static_cast<long long>(conn->send(std::move(frame)));
     }
     catch (const std::exception& e)
     {
@@ -165,11 +252,12 @@ long long capstomp_json(capstomp::connection& conn, UDF_INIT*,
     return 0;
 }
 
-void capstomp_json_deinit(capstomp::connection& conn, UDF_INIT*)
+extern "C" void capstomp_deinit(UDF_INIT* initid)
 {
     try
     {
-        conn.unlock();
+        auto conn = reinterpret_cast<cs::connection*>(initid->ptr);
+        conn->unlock();
     }
     catch (const std::exception& e)
     {
@@ -187,173 +275,25 @@ void capstomp_json_deinit(capstomp::connection& conn, UDF_INIT*)
     }
 }
 
-extern "C" my_bool capstomp_json01_init(UDF_INIT* initid,
+extern "C" my_bool capstomp_json_init(UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
 {
-    return capstomp_json_init(connarr[0], initid, args, msg);
+    return capstomp_init(initid, args, msg);
 }
 
-extern "C" long long capstomp_json01(UDF_INIT* initid,
+extern "C" long long capstomp(UDF_INIT* initid,
     UDF_ARGS* args, char* is_null, char* error)
 {
-    return capstomp_json(connarr[0], initid, args, is_null, error);
+    return capstomp_content(false, initid, args, is_null, error);
 }
 
-extern "C" void capstomp_json01_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[0], initid);
-}
-
-extern "C" my_bool capstomp_json02_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[1], initid, args, msg);
-}
-
-extern "C" long long capstomp_json02(UDF_INIT* initid,
+extern "C" long long capstomp_json(UDF_INIT* initid,
     UDF_ARGS* args, char* is_null, char* error)
 {
-    return capstomp_json(connarr[1], initid, args, is_null, error);
+    return capstomp_content(true, initid, args, is_null, error);
 }
 
-extern "C" void capstomp_json02_deinit(UDF_INIT* initid)
+extern "C" void capstomp_json_deinit(UDF_INIT* initid)
 {
-    return capstomp_json_deinit(connarr[1], initid);
-}
-
-extern "C" my_bool capstomp_json03_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[2], initid, args, msg);
-}
-
-extern "C" long long capstomp_json03(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[2], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json03_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[2], initid);
-}
-
-extern "C" my_bool capstomp_json04_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[3], initid, args, msg);
-}
-
-extern "C" long long capstomp_json04(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[3], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json04_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[3], initid);
-}
-
-extern "C" my_bool capstomp_json05_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[4], initid, args, msg);
-}
-
-extern "C" long long capstomp_json05(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[4], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json05_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[4], initid);
-}
-
-extern "C" my_bool capstomp_json06_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[5], initid, args, msg);
-}
-
-extern "C" long long capstomp_json06(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[5], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json06_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[5], initid);
-}
-
-extern "C" my_bool capstomp_json07_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[6], initid, args, msg);
-}
-
-extern "C" long long capstomp_json07(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[6], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json07_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[6], initid);
-}
-
-extern "C" my_bool capstomp_json08_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[7], initid, args, msg);
-}
-
-extern "C" long long capstomp_json08(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[7], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json08_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[7], initid);
-}
-
-extern "C" my_bool capstomp_json09_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    return capstomp_json_init(connarr[8], initid, args, msg);
-}
-
-extern "C" long long capstomp_json09(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[8], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json09_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[8], initid);
-}
-
-extern "C" my_bool capstomp_json10_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    static_assert (9 < CAPSTOMP_SOCKET_SLOTS, "need more socket slots");
-    return capstomp_json_init(connarr[9], initid, args, msg);
-}
-
-extern "C" long long capstomp_json10(UDF_INIT* initid,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return capstomp_json(connarr[9], initid, args, is_null, error);
-}
-
-extern "C" void capstomp_json10_deinit(UDF_INIT* initid)
-{
-    return capstomp_json_deinit(connarr[9], initid);
+    capstomp_deinit(initid);
 }

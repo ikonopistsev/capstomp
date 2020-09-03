@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10.1)
+cmake_minimum_required(VERSION 3.10)
 
-file(READ "${RELATIVE_SOURCE_DIR}version.txt" FILE_VER)
-file(READ "${RELATIVE_SOURCE_DIR}revision.txt" FILE_REV)
+file(READ "version.txt" FILE_VER)
+file(READ "revision.txt" FILE_REV)
 
 # менять верисю пакета тут
 project(capstomp VERSION ${FILE_VER} LANGUAGES CXX)
@@ -39,9 +39,16 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-set(CAPSTOMP_SOCKET_SLOTS "10" CACHE STRING "socket slots" FORCE)
+option(CAPSTOMP_TRACE_SOCKET_NUM "trace thread detection" OFF)
+if (CAPSTOMP_TRACE_SOCKET_NUM)
+  add_definitions(-DTRACE_SOCKET_NUM)
+endif()
 
-add_definitions(-DCAPSTOMP_REVISION=${FILE_VER})
+
+set(CAPSTOMP_SOCKET_SLOTS "32" CACHE STRING "socket slots")
+
+add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${FILE_VER}")
+add_definitions("-DCAPSTOMP_PLUGIN_REVISION=${FILE_REV}")
 add_definitions(-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS})
 
 set(sources

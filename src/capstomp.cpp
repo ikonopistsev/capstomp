@@ -1,31 +1,13 @@
 #include "capstomp.hpp"
+#include "btpro/sock_addr.hpp"
 #include <poll.h>
 
-namespace capstomp {
-
-destination::destination(std::string_view login, std::string_view passcode,
-    std::string_view vhost, const btpro::ipv4::addr& addr)
-    : login_(login)
-    , passcode_(passcode)
-    , vhost_(vhost)
-    , addr_(addr)
-{   }
-
-std::size_t destination::endpoint() const noexcept
-{
-    std::hash<std::string> hf;
-    std::string val;
-    val += login();
-    val += passcode();
-    val += vhost();
-    val += addr_.to_string();
-    return hf(val);
-}
+namespace cs {
 
 void connection::close() noexcept
 {
     socket_.close();
-    endpoint_ = 0;
+    uri_.clear();
 }
 
 connection::connection()
@@ -44,36 +26,35 @@ connection::~connection()
 }
 
 // подключаемся только на локалхост
-void connection::connect(const destination& dest)
+void connection::connect(std::string_view uri)
 {
     // захватыаем соединение
     lock();
 
-    auto ept = dest.endpoint();
-    if (ept && (ept != endpoint_))
+    if (uri_ != uri)
         close();
 
     // проверяем связь и было ли отключение
     if (!connected())
     {
+        url u(uri);
+        btpro::sock_addr addr(u.addr());
+
         auto fd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (btpro::code::fail == fd)
             throw std::system_error(btpro::net::error_code(), "socket");
 
-        auto addr = dest.addr();
         auto res = ::connect(fd, addr.sa(), addr.size());
         if (btpro::code::fail == res)
             throw std::system_error(btpro::net::error_code(), "connect");
 
         socket_.attach(fd);
 
-        // сохраняем новый endpoint
-        endpoint_ = ept;
-
+        uri_ = uri;
         // сбрасываем ошибку
         error_.clear();
 
-        logon(dest, timeout_);
+        logon(u, timeout_);
 
         if (!error_.empty())
             throw std::runtime_error(error_);
@@ -118,9 +99,9 @@ void connection::set_timeout(int timeout) noexcept
     timeout_ = timeout;
 }
 
-void connection::logon(const destination& dest, int timeout)
+void connection::logon(const url& u, int timeout)
 {
-    send(stompconn::logon(dest.vhost(), dest.login(), dest.passcode()));
+    send(stompconn::logon(u.vhost(), u.user(), u.passcode()));
     read_logon(timeout);
 }
 
