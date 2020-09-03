@@ -1,15 +1,15 @@
 [submodule "btdef"]
 	path = btdef
-	url = git@github.com:ikonopistsev/btdef.git
+	url = https://github.com/ikonopistsev/btdef.git
 [submodule "btpro"]
 	path = btpro
-	url = git@github.com:ikonopistsev/btpro.git
+	url = https://github.com/ikonopistsev/btpro.git
 [submodule "stomptalk"]
 	path = stomptalk
-	url = git@github.com:ikonopistsev/stomptalk.git
+	url = https://github.com/ikonopistsev/stomptalk.git
 [submodule "stompconn"]
 	path = stompconn
-	url = git@github.com:ikonopistsev/stompconn.git
+	url = https://github.com/ikonopistsev/stompconn.git
 [submodule "libevent"]
 	path = libevent
 	url = https://github.com/libevent/libevent.git
