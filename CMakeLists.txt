@@ -25,7 +25,7 @@ add_subdirectory(stomptalk)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
 
-option(CAPSTOMP_STATIC_LIBEVENT "add static libevent" ON)
+option(CAPSTOMP_STATIC_LIBEVENT "add static libevent" OFF)
 if (CAPSTOMP_STATIC_LIBEVENT)
     set(EVENT__LIBRARY_TYPE "STATIC")
     add_subdirectory(libevent)
