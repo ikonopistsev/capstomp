@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.10)
 file(READ "version.txt" FILE_VER)
 file(READ "revision.txt" FILE_REV)
 
-# менять верисю пакета тут
 project(capstomp VERSION ${FILE_VER} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -49,7 +48,8 @@ set(CAPSTOMP_SOCKET_SLOTS "32" CACHE STRING "socket slots")
 
 add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${FILE_VER}")
 add_definitions("-DCAPSTOMP_PLUGIN_REVISION=${FILE_REV}")
-add_definitions(-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS})
+add_definitions("-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS}")
+add_definitions("-DHAVE_DLOPEN")
 
 set(sources
     src/capstomp.cpp
@@ -58,7 +58,7 @@ set(sources
 )
 
 include_directories("/usr/include/mysql")
-add_definitions("-DHAVE_DLOPEN")
+
 add_library(capstomp SHARED ${sources})
 
 option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" OFF)

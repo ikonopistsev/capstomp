@@ -160,17 +160,20 @@ bool capstomp_fill_headers(stompconn::send& frame,
             if (detect(content_type(), key))
                 has_content_type = true;
 
+            using namespace stomptalk::header;
             auto type = args->arg_type[i];
             switch (type)
             {
             case REAL_RESULT: {
-                stomptalk::header::custom hdr(std::string(key_ptr, key_size),
+                base<std::string_view, std::string> hdr(
+                    std::string_view(key_ptr, key_size),
                     std::to_string(*reinterpret_cast<double*>(val_ptr)));
                 frame.push(hdr);
                 break;
             }
             case INT_RESULT: {
-                stomptalk::header::custom hdr(std::string(key_ptr, key_size),
+                base<std::string_view, std::string> hdr(
+                    std::string_view(key_ptr, key_size),
                     std::to_string(*reinterpret_cast<long long*>(val_ptr)));
                 frame.push(hdr);
                 break;
@@ -179,7 +182,7 @@ bool capstomp_fill_headers(stompconn::send& frame,
             case DECIMAL_RESULT: {
                 std::string_view key(key_ptr, key_size);
                 std::string_view val(val_ptr, val_size);
-                stomptalk::header::fixed hdr(key, val);
+                base_ref hdr(key, val);
                 frame.push(hdr);
                 break;
             }
