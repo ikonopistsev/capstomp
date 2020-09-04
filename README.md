@@ -88,10 +88,10 @@ Sends a `json-data` using specific socket.
 
 #### Parameters
 
-* `socket` (integer). Number of persisten connection (buy default library profide 32 sockets, 0-31). You may change socket pool size: `-DCAPSTOMP_SOCKET_SLOTS=64`
+* `socket` (integer). Number of persisten connection (by default library uses 32 sockets, 0-31). You may change socket pool size: `-DCAPSTOMP_SOCKET_SLOTS=64`
 
 ### `capstomp_json(uri, destination, socket, json-data [, stomp-header...])`
 
 Sends a `json-data` using specific socket with `content-type=application/json` header per message.
 
-> Based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
+> Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
