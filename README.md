@@ -52,7 +52,7 @@ CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
 
 Publishes a json `['Hello, World!']` to the `udf` exchange on `localhost:61613` with a routing key of `test` as the user `guest` with the password `guest` and vhost `123`. Upon success, the message size is returned.
 ```
-mysql> SELECT capstomp_json('stomp://guest:guest@localhost/123', '/exchange/udf/test', json_array('Hello, World!'));
+mysql> SELECT capstomp_json('stomp://guest:guest@localhost/123#/exchange/udf', 'test', json_array('Hello, World!'));
 ```
 this example works with [MySQL json functions](https://dev.mysql.com/doc/refman/8.0/en/json-functions.html)
 
