@@ -3,7 +3,7 @@
 #include <syslog.h>
 #include <cassert>
 
-using namespace cs;
+using namespace capst;
 
 journal::journal() noexcept
     : mask_(LOG_UPTO(LOG_NOTICE))

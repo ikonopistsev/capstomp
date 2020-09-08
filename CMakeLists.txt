@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-file(READ "version.txt" FILE_VER)
-file(READ "revision.txt" FILE_REV)
-
-project(capstomp VERSION ${FILE_VER} LANGUAGES CXX)
+project(capstomp VERSION 2.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,13 +9,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #set(EVENT__DISABLE_MBEDTLS ON)
 #set(EVENT__DISABLE_OPENSSL ON)
 #set(EVENT__LIBRARY_TYPE STATIC)
-
-#set(EVENT__DISABLE_BENCHMARK ON)
-#set(EVENT__DISABLE_REGRESS ON)
-#set(EVENT__DISABLE_REGRESS ON)
-#set(EVENT__DISABLE_SAMPLES ON)
-#set(EVENT__DISABLE_TESTS ON)
-
 
 add_subdirectory(stomptalk)
 
@@ -46,15 +36,16 @@ endif()
 
 set(CAPSTOMP_SOCKET_SLOTS "32" CACHE STRING "socket slots")
 
-add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${FILE_VER}")
-add_definitions("-DCAPSTOMP_PLUGIN_REVISION=${FILE_REV}")
+add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 add_definitions("-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS}")
 add_definitions("-DHAVE_DLOPEN")
 
 set(sources
-    src/capstomp.cpp
-    src/journal.cpp
     src/udf.cpp
+    src/pool.cpp
+    src/store.cpp
+    src/journal.cpp
+    src/connection.cpp
 )
 
 include_directories("/usr/include/mysql")

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace cs {
+namespace capst {
 
 class journal
 {
@@ -54,3 +54,5 @@ private:
 };
 
 } // namespace captor
+
+extern const capst::journal capst_journal;

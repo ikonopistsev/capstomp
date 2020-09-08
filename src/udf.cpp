@@ -1,113 +1,88 @@
-#include "capstomp.hpp"
+#include "store.hpp"
 #include "journal.hpp"
-#include <array>
 #include <thread>
 #include "mysql.hpp"
+#include "store.hpp"
+#include "stompconn/version.hpp"
+#include "stomptalk/version.hpp"
+#include "btdef/hash.hpp"
 
 // журнал работы
-static const cs::journal j;
+const capst::journal capst_journal;
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
+constexpr static std::string_view capst_version = STR(CAPSTOMP_PLUGIN_VERSION);
+#undef STR_HELPER
+#undef STR
 
 struct version
 {
     version() noexcept
     {
-        j.cout([]{
+        capst_journal.cout([&]{
             auto text = std::mkstr(std::cref("ver: "));
-            text += STR(CAPSTOMP_PLUGIN_VERSION);
-            text += stomptalk::sv(" rev: ");
-            text += STR(CAPSTOMP_PLUGIN_REVISION);
+            text += capst_version;
+            return text;
+        });
+
+        capst_journal.cout([]{
+            auto text = std::mkstr(std::cref("stomptalk: v"));
+            text += stomptalk::version();
+            return text;
+        });
+
+        capst_journal.cout([]{
+            auto text = std::mkstr(std::cref("stompconn: v"));
+            text += stompconn::version();
             return text;
         });
     }
 };
 
-#undef STR_HELPER
-#undef STR
+static const version capst_version_startup;
 
-static const version v;
-
-static cs::connection* get(std::size_t i)
-{
-    using pool_type = std::array<cs::connection, CAPSTOMP_SOCKET_SLOTS>;
-    static pool_type pool;
-    return &pool.at(i);
-}
-
-//            0          1     2       3           4
-// "capstomp("location", dest, socket, json-data[, param])"
-// "capstomp("location", dest, json-data[, param])"
-// "capstomp_json("location", dest, json-data[, param])"
-// "capstomp_json("location", dest, socket, json-data[, param])"
+//             0        1                2             3
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
 extern "C" my_bool capstomp_init(UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
 {
-    cs::connection *conn = nullptr;
+    capst::connection *conn = nullptr;
 
     try
     {
         auto args_count = args->arg_count;
         if ((args_count < 3) ||
             (!((args->arg_type[0] == STRING_RESULT) &&
-               (args->arg_type[1] == STRING_RESULT))))
+               (args->arg_type[1] == STRING_RESULT) &&
+               (args->arg_type[2] == STRING_RESULT))))
         {
             strncpy(msg, "bad args type, use "
-                "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
+                "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])",
                 MYSQL_ERRMSG_SIZE);
             return 1;
         }
 
-        std::size_t num = 0;
-        if (args->arg_type[2] == INT_RESULT)
-        {
-            if ((args_count < 4) || (!(args->arg_type[3] == STRING_RESULT)))
-            {
-                strncpy(msg, "bad socket type, use "
-                        "capstomp(\"uri\", \"dest\", socket, \"json-data\"[, param])",
-                        MYSQL_ERRMSG_SIZE);
-                return 1;
-            }
-
-            auto sock_ptr = args->args[2];
-            num = static_cast<std::size_t>(
-                *reinterpret_cast<long long*>(sock_ptr));
-        }
-        else if (args->arg_type[2] != STRING_RESULT)
-        {
-            strncpy(msg, "bad json-data type, use "
-                    "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
-                    MYSQL_ERRMSG_SIZE);
-            return 1;
-        }
-        else
-        {
-            std::hash<std::thread::id> hf;
-            num = hf(std::this_thread::get_id()) % CAPSTOMP_SOCKET_SLOTS;
-        }
-
-#ifdef TRACE_SOCKET_NUM
-        j.cout([&]{
-            std::string text("socket num: ");
-            text += std::to_string(num);
-            text += stomptalk::sv(" of: ");
-            text += std::to_string(CAPSTOMP_SOCKET_SLOTS);
-            return text;
-        });
-#endif
-
-        std::string_view uri(args->args[0], args->lengths[0]);
+        std::string uri(args->args[0], args->lengths[0]);
         if (uri.empty())
         {
             strncpy(msg, "empty uri, use "
-                "capstomp(\"uri\", \"dest\", \"json-data\"[, param])",
+                "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])",
                 MYSQL_ERRMSG_SIZE);
             return 1;
         }
 
-        // получаем соединение
-        conn = get(num);
+        // получаем хранилище
+        auto& store = capst::store::inst();
+
+        // получаем пулл соединенией
+        auto& pool = store.get(uri);
+
+        // получаем соединение из пула
+        conn = &pool.get();
         // подключаемся либо повтороно используем соединение
         conn->connect(uri);
 
@@ -125,21 +100,23 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
     }
     catch (...)
     {
-        strncpy(msg, "capstomp_json :*(", MYSQL_ERRMSG_SIZE);
+        strncpy(msg, ":*(", MYSQL_ERRMSG_SIZE);
     }
 
     if (conn)
     {
         conn->close();
-        conn->unlock();
+        conn->release();
     }
 
     return 1;
 }
 
-//            0          1     2       3           4
-// "capstomp("location", dest, socket, json-data[, param])"
-// "capstomp("location", dest, json-data[, param])"
+//             0        1                2             3
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
 bool capstomp_fill_headers(stompconn::send& frame,
                            UDF_ARGS* args, unsigned int from)
 {
@@ -160,30 +137,25 @@ bool capstomp_fill_headers(stompconn::send& frame,
             if (detect(content_type(), key))
                 has_content_type = true;
 
-            using namespace stomptalk::header;
+            using namespace stomptalk;
+
             auto type = args->arg_type[i];
             switch (type)
             {
             case REAL_RESULT: {
-                base<std::string_view, std::string> hdr(
-                    std::string_view(key_ptr, key_size),
-                    std::to_string(*reinterpret_cast<double*>(val_ptr)));
-                frame.push(hdr);
+                frame.push(header::make(std::string_view(key_ptr, key_size),
+                    std::to_string(*reinterpret_cast<double*>(val_ptr))));
                 break;
             }
             case INT_RESULT: {
-                base<std::string_view, std::string> hdr(
-                    std::string_view(key_ptr, key_size),
-                    std::to_string(*reinterpret_cast<long long*>(val_ptr)));
-                frame.push(hdr);
+                frame.push(header::make(std::string_view(key_ptr, key_size),
+                    std::to_string(*reinterpret_cast<long long*>(val_ptr))));
                 break;
             }
             case STRING_RESULT:
             case DECIMAL_RESULT: {
-                std::string_view key(key_ptr, key_size);
-                std::string_view val(val_ptr, val_size);
-                base_ref hdr(key, val);
-                frame.push(hdr);
+                frame.push(header::make_ref(std::string_view(key_ptr, key_size),
+                    std::string_view(val_ptr, val_size)));
                 break;
             }
             default:;
@@ -194,58 +166,81 @@ bool capstomp_fill_headers(stompconn::send& frame,
     return has_content_type;
 }
 
-//            0          1     2       3           4
-// "capstomp("location", dest, socket, json-data[, param])"
-// "capstomp("location", dest, json-data[, param])"
+//             0        1                2             3
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
+// "capstomp_json(\"uri\", \"routing-key\", \"json-data\"[, param])"
 long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
                    char* is_null, char* error)
 {
     try
     {
-        std::string_view destination(args->args[1], args->lengths[1]);
-        if (destination.empty())
+        std::string_view routing_key(args->args[1], args->lengths[1]);
+
+        auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+
+        std::string destination(conn->destination());
+        if (routing_key.empty())
         {
-            j.cerr([&]{
-                return std::mkstr(std::cref("destination empty"));
-            });
-
-            *is_null = 0;
-            *error = 1;
-
-            return 0;
+            destination += '/';
+            destination += routing_key;
         }
 
-        // определяем позицию контента
-        unsigned int j = 2;
-        if (args->arg_type[2] == INT_RESULT)
-            j = 3;
+#ifndef NDEBUG
+        capst_journal.cout([&]{
+            std::string text = "connection: transaction_id=";
+            text += conn->transaction_id();
+            text += " content to destintation=";
+            text += destination;
+            return text;
+        });
+#endif
 
         stompconn::send frame(destination);
-        if (!capstomp_fill_headers(frame, args, j + 1))
+        frame.push(stomptalk::header::time_since_epoch());
+
+#ifndef NDEBUG
+        capst_journal.cout([&]{
+            std::string text = "connection: transaction_id=";
+            text += conn->transaction_id();
+            text += " fill headers";
+            return text;
+        });
+#endif
+        if (!capstomp_fill_headers(frame, args, 3))
         {
             if (json)
                 frame.push(stomptalk::header::content_type_json());
         }
 
         btpro::buffer payload;
-        payload.append_ref(args->args[j], args->lengths[j]);
+        payload.append_ref(args->args[2], args->lengths[2]);
+
+#ifndef NDEBUG
+        capst_journal.cout([&]{
+            std::string text = "connection: transaction_id=";
+            text += conn->transaction_id();
+            text += " send payload size:";
+            text += std::to_string(payload.size());
+            return text;
+        });
+#endif
+
         frame.payload(std::move(payload));
 
-        auto conn = reinterpret_cast<cs::connection*>(initid->ptr);
         return static_cast<long long>(conn->send(std::move(frame)));
     }
     catch (const std::exception& e)
     {
-        j.cerr([&]{
-            auto text = std::mkstr(std::cref("capstomp_json: "), 320);
-            text += e.what();
-            return text;
+        capst_journal.cerr([&]{
+            return std::string(e.what());
         });
     }
     catch (...)
     {
-        j.cerr([&]{
-            return "capstomp_json :*(";
+        capst_journal.cerr([&]{
+            return ":*(";
         });
     }
 
@@ -259,21 +254,19 @@ extern "C" void capstomp_deinit(UDF_INIT* initid)
 {
     try
     {
-        auto conn = reinterpret_cast<cs::connection*>(initid->ptr);
-        conn->unlock();
+        auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+        conn->commit();
     }
     catch (const std::exception& e)
     {
-        j.cerr([&]{
-            auto text = std::mkstr(std::cref("capstomp_json: "), 320);
-            text += e.what();
-            return text;
+        capst_journal.cerr([&]{
+            return std::string(e.what());
         });
     }
     catch (...)
     {
-        j.cerr([&]{
-            return "capstomp_json :*(";
+        capst_journal.cerr([&]{
+            return ":*(";
         });
     }
 }
