@@ -1,11 +1,11 @@
 #include "store.hpp"
 #include "journal.hpp"
-#include <thread>
 #include "mysql.hpp"
-#include "store.hpp"
+
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
-#include "btdef/hash.hpp"
+
+#include <thread>
 
 // журнал работы
 const capst::journal capst_journal;
@@ -231,6 +231,8 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         frame.payload(std::move(payload));
 
 #ifndef NDEBUG
+        // это для теста медленного триггера
+        // подвешиваем на 30 секунд
         static bool stoppe = true;
         if (stoppe)
         {

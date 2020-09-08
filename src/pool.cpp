@@ -1,7 +1,9 @@
 #include "pool.hpp"
 #include "journal.hpp"
-#include <memory>
+
 #include "btdef/text.hpp"
+
+#include <memory>
 
 using namespace std::literals;
 
