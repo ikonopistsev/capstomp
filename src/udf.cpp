@@ -181,7 +181,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
 
         std::string destination(conn->destination());
-        if (routing_key.empty())
+        if (!routing_key.empty())
         {
             destination += '/';
             destination += routing_key;
@@ -199,6 +199,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 
         stompconn::send frame(destination);
         frame.push(stomptalk::header::time_since_epoch());
+        frame.push(stomptalk::header::transaction(conn->transaction_id()));
 
 #ifndef NDEBUG
         capst_journal.cout([&]{
@@ -228,6 +229,15 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 #endif
 
         frame.payload(std::move(payload));
+
+#ifndef NDEBUG
+        static bool stoppe = true;
+        if (stoppe)
+        {
+            stoppe = false;
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+        }
+#endif
 
         return static_cast<long long>(conn->send(std::move(frame)));
     }

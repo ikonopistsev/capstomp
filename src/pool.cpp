@@ -3,6 +3,8 @@
 #include <memory>
 #include "btdef/text.hpp"
 
+using namespace std::literals;
+
 namespace capst {
 
 std::string pool::create_transaction_id()
@@ -24,9 +26,11 @@ connection& pool::get()
     {
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: using an existing connection, ready: ";
+            std::string text;
+            text.reserve(64);
+            text += "pool: using an existing connection, ready: "sv;
             text += std::to_string(ready_.size());
-            text += " active: ";
+            text += " active: "sv;
             text += std::to_string(active_.size());
             return text;
         });
@@ -37,8 +41,10 @@ connection& pool::get()
     {
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: create new connection, ";
-            text += " active: ";
+            std::string text;
+            text.reserve(64);
+            text += "pool: create new connection, "sv;
+            text += " active: "sv;
             text += std::to_string(active_.size());
             return text;
         });
@@ -47,15 +53,19 @@ connection& pool::get()
     }
 
     auto& conn = active_.front();
-    conn.set(active_.begin());
+    auto connection_id = active_.begin();
+
+    conn.set(connection_id);
 
     // создаем транзакцию
     auto transaction_id = transaction_store_.emplace(
-        transaction_store_.end(), create_transaction_id());
+        transaction_store_.end(), create_transaction_id(), connection_id);
 
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: set connection transaction: ";
+            std::string text;
+            text.reserve(64);
+            text += "pool: set connection transaction: "sv;
             text += transaction_id->id();
             return text;
         });
@@ -77,8 +87,11 @@ pool::get_uncommited(transaction_id_type i)
 
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: set ready transaction_id=";
+            std::string text;
+            text.reserve(64);
+            text += "pool: transaction_id="sv;
             text += i->id();
+            text += " ready"sv;
             return text;
         });
 #endif
@@ -95,9 +108,11 @@ pool::get_uncommited(transaction_id_type i)
     {
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: transaction_id=";
+            std::string text;
+            text.reserve(64);
+            text += "pool: transaction_id="sv;
             text += i->id();
-            text += " deffered commit";
+            text += " deffered commit"sv;
             return text;
         });
 #endif
@@ -120,9 +135,11 @@ pool::get_uncommited(transaction_id_type i)
     {
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: transaction_id=";
+            std::string text;
+            text.reserve(64);
+            text += "pool: transaction_id="sv;
             text += i->id();
-            text += " add to commit list";
+            text += " add commit"sv;
             return text;
         });
 #endif
@@ -131,6 +148,16 @@ pool::get_uncommited(transaction_id_type i)
 
     // формируем список транзакций для отправки коммитов
     rc.splice(rc.begin(), transaction_store_, b, i);
+
+#ifndef NDEBUG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool: transaction store size="sv;
+            text += std::to_string(transaction_store_.size());
+            return text;
+        });
+#endif
 
     // и возвращаем его
     return rc;
@@ -143,10 +170,14 @@ void pool::release(connection_id_type connection_id)
 
 #ifndef NDEBUG
         capst_journal.cout([&]{
-            std::string text = "pool: store existing connection, ready: ";
+            std::string text;
+            text.reserve(64);
+            text += "pool: ready: "sv;
             text += std::to_string(ready_.size());
-            text += " active: ";
+            text += " active: "sv;
             text += std::to_string(active_.size());
+            text += " store connection: transaction_id=";
+            text += connection_id->transaction_id();
             return text;
         });
 #endif

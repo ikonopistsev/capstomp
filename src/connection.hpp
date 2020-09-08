@@ -22,22 +22,23 @@ public:
     using list_type = std::list<connection>;
     using connection_id_type = list_type::iterator;
 
-    using transaction_type = transaction<btdef::util::basic_text<char, 64>>;
+    using transaction_type =
+        transaction<btdef::util::basic_text<char, 64>, connection_id_type>;
     using transaction_store_type = std::list<transaction_type>;
     using transaction_id_type = transaction_store_type::iterator;
 
 private:
     pool& pool_;
+    // указатель на позицию в пуле коннектов
     connection_id_type self_{};
+    // указатель на выполняемую транзакцию
+    transaction_id_type transaction_{};
     // connection string
     std::string uri_{};
     std::string destination_{};
-    std::string_view transaction_id_{};
-    // указатель на выполняемую транзакцию
-    transaction_id_type transaction_{};
+    std::string transaction_id_{};
     // stomp protocol error
     std::string error_{};
-    std::mutex mutex_{};
     std::size_t receipt_id_{};
     bool wait_receipt_{false};
 
@@ -68,7 +69,13 @@ public:
     std::size_t send(T frame, const std::string& receipt_id, F fn)
     {
         frame.push(stomptalk::header::receipt(receipt_id));
-        stomplay_.add_handler(receipt_id, std::move(fn));
+
+        stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
+            // завершаем ожидание квитанции
+            wait_receipt_ = false;
+            // вызываем
+            fn(std::move(packet));
+        });
 
         return send(std::move(frame));
     }
@@ -98,7 +105,14 @@ public:
         return transaction_id_;
     }
 
+    std::string_view error() const noexcept
+    {
+        return error_;
+    }
+
     std::string create_receipt_id(std::string_view action);
+
+    void read_receipt(int timeout);
 
 private:
 
@@ -108,13 +122,11 @@ private:
 
     void begin();
 
-    void commit(transaction_store_type transaction_store);
+    std::size_t commit(transaction_store_type transaction_store);
 
     bool ready_read(int timeout);
 
     void read_logon(int timeout);
-
-    void read_receipt(int timeout);
 
     bool read_stomp();
 
