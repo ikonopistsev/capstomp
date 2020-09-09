@@ -204,7 +204,7 @@ void connection::begin()
         });
 #endif
 
-    send(std::move(frame), receipt_id, [&](stompconn::packet receipt){
+    send(std::move(frame), receipt_id, [&, receipt_id](stompconn::packet receipt){
         if (receipt)
         {
 #ifdef CAPSTOMP_TRACE_LOG
@@ -261,7 +261,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 #endif
 
             connection_id->send(std::move(frame), receipt_id,
-                [&](stompconn::packet receipt){
+                [&, receipt_id](stompconn::packet receipt){
                     if (receipt)
                     {
 #ifdef CAPSTOMP_TRACE_LOG
