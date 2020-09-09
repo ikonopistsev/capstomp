@@ -5,9 +5,9 @@
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
 
-//#ifndef NDEBUG
-//#include <thread>
-//#endif //
+#ifdef CAPSTOMP_STAPPE_TEST
+#include <thread>
+#endif
 
 using namespace std::literals;
 
@@ -234,16 +234,16 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 
         frame.payload(std::move(payload));
 
-//#ifndef NDEBUG
-//        // это для теста медленного триггера
-//        // подвешиваем на 30 секунд
-//        static bool stappe = true;
-//        if (stappe)
-//        {
-//            stoppe = false;
-//            std::this_thread::sleep_for(std::chrono::seconds(30));
-//        }
-//#endif
+#ifdef CAPSTOMP_STAPPE_TEST
+        // это для теста медленного триггера
+        // подвешиваем на 30 секунд
+        static bool stappe = true;
+        if (stappe)
+        {
+            stoppe = false;
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+        }
+#endif
 
         return static_cast<long long>(conn->send(std::move(frame)));
     }
@@ -271,6 +271,7 @@ extern "C" void capstomp_deinit(UDF_INIT* initid)
     try
     {
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+        // возможно, это уничтожит этот объект соединения
         conn->commit();
     }
     catch (const std::exception& e)
