@@ -21,12 +21,15 @@ pool::pool()
 
 connection& pool::get()
 {
+    static constexpr auto max_pool_socket =
+        std::size_t{CAPSTOMP_MAX_POOL_SOCKETS};
+
     lock l(mutex_);
 
     auto i = ready_.begin();
     if (i != ready_.end())
     {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -41,7 +44,11 @@ connection& pool::get()
     }
     else
     {
-#ifndef NDEBUG
+        if (active_.size() >= max_pool_socket)
+            throw std::runtime_error("pool: max_pool_socket=" +
+                                     std::to_string(max_pool_socket));
+
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -63,7 +70,7 @@ connection& pool::get()
     auto transaction_id = transaction_store_.emplace(
         transaction_store_.end(), create_transaction_id(), connection_id);
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -87,7 +94,7 @@ pool::get_uncommited(transaction_id_type i)
 
     lock l(mutex_);
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -108,7 +115,7 @@ pool::get_uncommited(transaction_id_type i)
     auto b = transaction_store_.begin();
     if (i != b)
     {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -135,7 +142,7 @@ pool::get_uncommited(transaction_id_type i)
     // прокручиваем лист
     while (i->ready() && (i != e))
     {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -151,14 +158,14 @@ pool::get_uncommited(transaction_id_type i)
     // формируем список транзакций для отправки коммитов
     rc.splice(rc.begin(), transaction_store_, b, i);
 
-#ifndef NDEBUG
-        capst_journal.cout([&]{
-            std::string text;
-            text.reserve(64);
-            text += "pool: transaction store size="sv;
-            text += std::to_string(transaction_store_.size());
-            return text;
-        });
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.cout([&]{
+        std::string text;
+        text.reserve(64);
+        text += "pool: transaction store size="sv;
+        text += std::to_string(transaction_store_.size());
+        return text;
+    });
 #endif
 
     // и возвращаем его
@@ -170,7 +177,11 @@ void pool::release(connection_id_type connection_id)
 {
     lock l(mutex_);
 
-#ifndef NDEBUG
+    static constexpr auto pool_socket = std::size_t{CAPSTOMP_POOL_SOCKETS};
+
+    if (ready_.size() < pool_socket)
+    {
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -184,10 +195,28 @@ void pool::release(connection_id_type connection_id)
         });
 #endif
 
-    // перемещаем соединенеи в список готовых к работе
-    ready_.splice(ready_.begin(), active_, connection_id);
-    auto& conn = ready_.front();
-    conn.set(ready_.begin());
+        // перемещаем соединенеи в список готовых к работе
+        ready_.splice(ready_.begin(), active_, connection_id);
+        auto& conn = ready_.front();
+        conn.set(ready_.begin());
+    }
+    else
+    {
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool: ready: "sv;
+            text += std::to_string(ready_.size());
+            text += " active: "sv;
+            text += std::to_string(active_.size());
+            text += " erase connection: transaction_id=";
+            text += connection_id->transaction_id();
+            return text;
+        });
+#endif
+        active_.erase(connection_id);
+    }
 }
 
 } // namespace capst

@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.0.1 LANGUAGES CXX)
+project(capstomp VERSION 2.0.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-#set(EVENT__DISABLE_MBEDTLS ON)
-#set(EVENT__DISABLE_OPENSSL ON)
-#set(EVENT__LIBRARY_TYPE STATIC)
 
 add_subdirectory(stomptalk)
 
@@ -28,13 +24,19 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-option(CAPSTOMP_TRACE_SOCKET_NUM "trace thread detection" OFF)
-if (CAPSTOMP_TRACE_SOCKET_NUM)
-  add_definitions(-DTRACE_SOCKET_NUM)
+set(CAPSTOMP_POOL_SOCKETS "256" CACHE STRING "count of cached soktest in pool")
+add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
+
+set(CAPSTOMP_MAX_POOL_SOCKETS "4096" CACHE STRING "max sockets in pool")
+add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
+
+set(CAPSTOMP_MAX_POOL_COUNT "256" CACHE STRING "max of sockets pools")
+add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
+
+option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)
+if (CAPSTOMP_TRACE_LOG)
+    add_definitions(-DCAPSTOMP_TRACE_LOG)
 endif()
-
-
-set(CAPSTOMP_SOCKET_SLOTS "32" CACHE STRING "socket slots")
 
 add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 add_definitions("-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS}")

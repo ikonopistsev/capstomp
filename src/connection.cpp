@@ -12,7 +12,7 @@ namespace capst {
 
 void connection::close() noexcept
 {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
     if (socket_.good())
         capst_journal.cout([&]{
             std::string text;
@@ -35,7 +35,7 @@ connection::connection(pool& pool)
         if (!logon)
         {
             error_ = logon.payload().str();
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cout([&]{
                 std::string text;
                 text.reserve(64);
@@ -51,7 +51,7 @@ connection::connection(pool& pool)
 
     stomplay_.on_error([&](stompconn::packet packet){
         error_ = packet.payload().str();
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -75,7 +75,7 @@ void connection::connect(std::string_view uri)
 {
     if (uri_ != uri)
     {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -167,7 +167,7 @@ void connection::logon(const uri& u, int timeout)
     if (path != "/"sv)
         path = u.rpath();
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -192,7 +192,7 @@ void connection::begin()
     frame.push(stomptalk::header::time_since_epoch());
     auto receipt_id = create_receipt_id(transaction_id_);
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -206,6 +206,8 @@ void connection::begin()
 
     send(std::move(frame), receipt_id, [&](stompconn::packet receipt){
         if (receipt)
+        {
+#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cout([&, receipt_id]{
                 std::string text;
                 text.reserve(64);
@@ -215,7 +217,11 @@ void connection::begin()
                 text += receipt_id;
                 return text;
             });
+#endif //
+        }
         else
+        {
+#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cerr([&, receipt_id]{
                 std::string text;
                 text.reserve(64);
@@ -225,6 +231,8 @@ void connection::begin()
                 text += receipt_id;
                 return text;
             });
+#endif
+        }
     });
 }
 
@@ -240,7 +248,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
             frame.push(stomptalk::header::time_since_epoch());
             auto receipt_id = connection_id->create_receipt_id(transaction_id);
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cout([&]{
                 std::string text;
                 text.reserve(64);
@@ -254,7 +262,9 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 
             connection_id->send(std::move(frame), receipt_id,
                 [&](stompconn::packet receipt){
-                    if (receipt) {
+                    if (receipt)
+                    {
+#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.cout([&, receipt_id]{
                             std::string text;
                             text.reserve(64);
@@ -264,9 +274,11 @@ std::size_t connection::commit(transaction_store_type transaction_store)
                             text += receipt_id;
                             return text;
                         });
+#endif
                     }
                     else
                     {
+#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.cerr([&, receipt_id]{
                             std::string text;
                             text.reserve(64);
@@ -276,6 +288,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
                             text += receipt_id;
                             return text;
                         });
+#endif
                     }
             });
 
@@ -283,7 +296,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 
             if (connection_id != self_)
             {
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
                 capst_journal.cout([&]{
                     std::string text;
                     text.reserve(64);
@@ -297,6 +310,8 @@ std::size_t connection::commit(transaction_store_type transaction_store)
             }
         }
         else
+        {
+#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cerr([&]{
                 std::string text;
                 text.reserve(64);
@@ -305,6 +320,8 @@ std::size_t connection::commit(transaction_store_type transaction_store)
                 text += " - connecton lost"sv;
                 return text;
             });
+#endif
+        }
     }
 
     return transaction_store.size();
@@ -345,7 +362,7 @@ void connection::read_logon(int timeout)
         // пока не получили сессию
     } while (session.empty() && error_.empty());
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
     if (!session.empty())
     {
         capst_journal.cout([&]{
@@ -416,15 +433,15 @@ void connection::commit()
 
 void connection::release()
 {
-#ifndef NDEBUG
-                capst_journal.cout([&]{
-                    std::string text;
-                    text.reserve(64);
-                    text += "connection: transaction_id="sv;
-                    text += transaction_id_;
-                    text += " release"sv;
-                    return text;
-                });
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.cout([&]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: transaction_id="sv;
+        text += transaction_id_;
+        text += " release"sv;
+        return text;
+    });
 #endif
 
     pool_.release(self_);

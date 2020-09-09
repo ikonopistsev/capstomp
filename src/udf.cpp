@@ -5,7 +5,11 @@
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
 
-#include <thread>
+//#ifndef NDEBUG
+//#include <thread>
+//#endif //
+
+using namespace std::literals;
 
 // журнал работы
 const capst::journal capst_journal;
@@ -124,6 +128,14 @@ bool capstomp_fill_headers(stompconn::send& frame,
     using content_type = stomptalk::header::tag::content_type;
 
     bool has_content_type = false;
+
+#ifdef CAPSTOMP_TRACE_LOG
+    if (from < args->arg_count) {
+        capst_journal.cout([]{
+            return std::string("connection: fill headers");
+        });
+    }
+#endif
     for (unsigned int i = from; i < args->arg_count; ++i)
     {
         auto key_ptr = args->attributes[i];
@@ -187,7 +199,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
             destination += routing_key;
         }
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text = "connection: transaction_id=";
             text += conn->transaction_id();
@@ -201,14 +213,6 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         frame.push(stomptalk::header::time_since_epoch());
         frame.push(stomptalk::header::transaction(conn->transaction_id()));
 
-#ifndef NDEBUG
-        capst_journal.cout([&]{
-            std::string text = "connection: transaction_id=";
-            text += conn->transaction_id();
-            text += " fill headers";
-            return text;
-        });
-#endif
         if (!capstomp_fill_headers(frame, args, 3))
         {
             if (json)
@@ -218,7 +222,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         btpro::buffer payload;
         payload.append_ref(args->args[2], args->lengths[2]);
 
-#ifndef NDEBUG
+#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text = "connection: transaction_id=";
             text += conn->transaction_id();
@@ -230,16 +234,16 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 
         frame.payload(std::move(payload));
 
-#ifndef NDEBUG
-        // это для теста медленного триггера
-        // подвешиваем на 30 секунд
-        static bool stoppe = true;
-        if (stoppe)
-        {
-            stoppe = false;
-            std::this_thread::sleep_for(std::chrono::seconds(30));
-        }
-#endif
+//#ifndef NDEBUG
+//        // это для теста медленного триггера
+//        // подвешиваем на 30 секунд
+//        static bool stappe = true;
+//        if (stappe)
+//        {
+//            stoppe = false;
+//            std::this_thread::sleep_for(std::chrono::seconds(30));
+//        }
+//#endif
 
         return static_cast<long long>(conn->send(std::move(frame)));
     }

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string_view>
-#include "btdef/text.hpp"
 #include "btdef/date.hpp"
+#include <string_view>
 
 namespace capst {
 
@@ -11,65 +10,53 @@ class transaction
 {
     using string_type = T;
     using connection_type = C;
-    using data_type = std::tuple<string_type, btdef::date, std::size_t, connection_type>;
-    data_type that_{ std::string_view(), btdef::date::now(), 0u, connection_type()};
+    using ready_type = std::size_t;
+    using date_type = btdef::date;
 
-    auto& ready_val() noexcept
-    {
-        return std::get<2>(that_);
-    }
+    using data_type =
+        std::tuple<string_type, date_type, ready_type, connection_type>;
 
-    auto ready_val() const noexcept
-    {
-        return std::get<2>(that_);
-    }
+    data_type that_{ string_type(),
+        date_type::now(), ready_type(), connection_type()};
 
-    auto& connection_val() noexcept
-    {
-        return std::get<3>(that_);
-    }
-
-    auto connection_val() const noexcept
-    {
-        return std::get<3>(that_);
-    }
 
 public:
     transaction() = default;
 
     transaction(std::string_view id, connection_type connection) noexcept
-        : that_(id, btdef::date::now(), false, connection)
+        : that_(id, date_type::now(), ready_type(), connection)
     {   }
 
     auto id() const noexcept
     {
-        auto& i = std::get<0>(that_);
+        auto& i = std::get<string_type>(that_);
         return std::string_view(i.data(), i.size());
     }
 
     auto time() const noexcept
     {
-        return std::get<1>(that_);
+        return std::get<date_type>(that_);
     }
 
-    bool ready() const noexcept
+    auto ready() const noexcept
     {
-        return ready_val() > 0u;
+        return std::get<ready_type>(that_) > ready_type();
+    }
+
+    auto connection() const noexcept
+    {
+        return std::get<connection_type>(that_);
+    }
+
+    template<class V>
+    void set(V value)
+    {
+        std::get<V>(that_) = value;
     }
 
     void set(bool ready) noexcept
     {
-        ready_val() = static_cast<std::size_t>(ready);
-    }
-
-    void set(connection_type connection)
-    {
-        connection_val() = connection;
-    }
-
-    connection_type connection() const noexcept
-    {
-        return connection_val();
+        set(static_cast<ready_type>(ready));
     }
 };
 
