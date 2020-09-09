@@ -27,10 +27,10 @@ endif()
 set(CAPSTOMP_POOL_SOCKETS "256" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_SOCKETS "4096" CACHE STRING "max sockets in pool")
+set(CAPSTOMP_MAX_POOL_SOCKETS "512" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_COUNT "256" CACHE STRING "max of sockets pools")
+set(CAPSTOMP_MAX_POOL_COUNT "32" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
 option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)
@@ -39,7 +39,6 @@ if (CAPSTOMP_TRACE_LOG)
 endif()
 
 add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
-add_definitions("-DCAPSTOMP_SOCKET_SLOTS=${CAPSTOMP_SOCKET_SLOTS}")
 add_definitions("-DHAVE_DLOPEN")
 
 set(sources
