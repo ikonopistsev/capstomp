@@ -5,6 +5,7 @@
 #include "btpro/sock_addr.hpp"
 
 #include <poll.h>
+#include <event2/keyvalq_struct.h>
 
 using namespace std::literals;
 
@@ -111,6 +112,20 @@ void connection::connect(std::string_view uri)
         // сбрасываем ошибку
         error_.clear();
 
+        struct evkeyvalq hdr = {};
+        if (0 == evhttp_parse_query_str(u.query().data(), &hdr))
+        {
+            auto transaction_receipt = "transaction_receipt"sv;
+
+            for (auto h = hdr.tqh_first; h; h = h->next.tqe_next)
+            {
+                if (transaction_receipt == h->key)
+                    transaction_receipt_ = 1;
+            }
+
+            evhttp_clear_headers(&hdr);
+        }
+
         logon(u, timeout_);
 
         if (!error_.empty())
@@ -119,8 +134,6 @@ void connection::connect(std::string_view uri)
 
     // начинаем транзакцию
     begin();
-
-    read_receipt(timeout_);
 
     if (!error_.empty())
         throw std::runtime_error(error_);
@@ -234,6 +247,8 @@ void connection::begin()
 #endif
         }
     });
+
+    read_receipt(timeout_);
 }
 
 std::size_t connection::commit(transaction_store_type transaction_store)
@@ -380,24 +395,27 @@ void connection::read_logon(int timeout)
 
 void connection::read_receipt(int timeout)
 {
-    wait_receipt_ = true;
+    if (transaction_receipt_)
+    {
+        wait_receipt_ = true;
 
-    do {
-        // ждем события чтения
-        if (ready_read(timeout))
-        {
-            if (!read_stomp())
+        do {
+            // ждем события чтения
+            if (ready_read(timeout))
             {
-                socket_.close();
+                if (!read_stomp())
+                {
+                    socket_.close();
 
-                if (!error_.empty())
-                    error_ = stomptalk::sv("read_receipt disconnect");
+                    if (!error_.empty())
+                        error_ = stomptalk::sv("read_receipt disconnect");
+                }
             }
-        }
-        else
-            throw std::runtime_error("read_receipt timeout");
-        // пока не получили сессию
-    } while (wait_receipt_ && error_.empty());
+            else
+                throw std::runtime_error("read_receipt timeout");
+            // пока не получили сессию
+        } while (wait_receipt_ && error_.empty());
+    }
 }
 
 

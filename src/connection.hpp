@@ -41,6 +41,7 @@ private:
     std::string error_{};
     std::size_t receipt_id_{};
     bool wait_receipt_{false};
+    std::size_t transaction_receipt_{};
 
     // connection timeout
     int timeout_{10000};
@@ -68,14 +69,17 @@ public:
     template<class T, class F>
     std::size_t send(T frame, const std::string& receipt_id, F fn)
     {
-        frame.push(stomptalk::header::receipt(receipt_id));
+        if (transaction_receipt_)
+        {
+            frame.push(stomptalk::header::receipt(receipt_id));
 
-        stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
-            // завершаем ожидание квитанции
-            wait_receipt_ = false;
-            // вызываем
-            fn(std::move(packet));
-        });
+            stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
+                // завершаем ожидание квитанции
+                wait_receipt_ = false;
+                // вызываем
+                fn(std::move(packet));
+            });
+        }
 
         return send(std::move(frame));
     }
