@@ -17,6 +17,10 @@ Each call of method blocks the DBMS trigger until the data is sent. The first ti
 * [libevent](https://github.com/libevent/libevent) event notification library
 * [RabbitMQ STOMP plugin](https://www.rabbitmq.com/stomp.html) RabbitMQ STOMP protocol support
 
+or
+
+* [RabbitMQ STOMP plugin](https://www.rabbitmq.com/stomp.html) RabbitMQ STOMP protocol support
+
 ## Building
 
 Build with cmake and system libevent
