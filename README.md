@@ -58,19 +58,19 @@ this example works with [MySQL json functions](https://dev.mysql.com/doc/refman/
 
 You may use any json generator for MySQL. I use [my own](https://github.com/ikonopistsev/capjs) :)
 ```
-mysql> SELECT capstomp_json('stomp://guest:guest@localhost:61613/123', '/exchange/udf/test', jsarr('Hello, World!'));
+mysql> SELECT capstomp_json('stomp://guest:guest@localhost:61613/123#/exchange/udf', 'test', jsarr('Hello, World!'));
 ```
 
 ## API
 
-### `capstomp(uri, destination, json-data [, stomp-header...])`
+### `capstomp(uri, routing-key, json-data [, stomp-header...])`
 
 Sends a `json-data` to the given `destination` on the provided `uri`.
 
 #### Parameters
 
-* `uri` (string). "stomp://guest:guest@localhost" you must use only local connections between DBMS and message broker!
-* `destination` (string). [STOMP exchange or queue](https://www.rabbitmq.com/stomp.html#d).
+* `uri` (string). "stomp://guest:guest@localhost/vhost#/exchange_or_queue/name" [STOMP exchange or queue](https://www.rabbitmq.com/stomp.html#d).
+* `routing-key` (string). routing key for exchanges, or empty ''
 * `json-data` (string). The body of the message (typically json but it may any string).
 * `stomp-header` (mostly string). `round(unix_timestamp(now(4))*1000) as 'timestamp'` will add to STOMP header `timestamp=1599081164296`
 
@@ -78,20 +78,8 @@ Sends a `json-data` to the given `destination` on the provided `uri`.
 
 Upon succes, this function returns a number containing the size of sending data.
 
-### `capstomp_json(uri, destination, json-data [, stomp-header...])`
+### `capstomp_json(uri, routing-key, json-data [, stomp-header...])`
 
 Same as `capstomp` but it add `content-type=application/json` header to each message.
-
-### `capstomp(uri, destination, socket, json-data [, stomp-header...])`
-
-Sends a `json-data` using specific socket.
-
-#### Parameters
-
-* `socket` (integer). Number of persisten connection (by default library uses 32 sockets, 0-31). You may change socket pool size: `-DCAPSTOMP_SOCKET_SLOTS=64`
-
-### `capstomp_json(uri, destination, socket, json-data [, stomp-header...])`
-
-Sends a `json-data` using specific socket with `content-type=application/json` header per message.
 
 > Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
