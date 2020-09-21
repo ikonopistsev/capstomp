@@ -10,7 +10,7 @@ pool& store::select_pool(const uri& u)
 {
     static constexpr auto pool_max = std::size_t{CAPSTOMP_MAX_POOL_COUNT};
 
-    endpoint ep(u);
+    endpoint_type ep(u);
 
     lock l(mutex_);
 

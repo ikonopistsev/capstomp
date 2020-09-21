@@ -11,8 +11,8 @@ namespace capst {
 
 class store
 {
-    using endpoint = endpoint<std::string>;
-    using store_type = std::unordered_map<endpoint, pool, endpoint::hf>;
+    using endpoint_type = endpoint<std::string>;
+    using store_type = std::unordered_map<endpoint_type, pool, endpoint_type::hf>;
     using lock = std::lock_guard<std::mutex>;
 
     std::mutex mutex_{};
