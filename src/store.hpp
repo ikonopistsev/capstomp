@@ -11,19 +11,20 @@ namespace capst {
 
 class store
 {
-    using store_type = std::list<pool>;
-    using iterator = store_type::iterator;
-    using index_type = std::unordered_map<std::string, iterator>;
+    using endpoint = endpoint<std::string>;
+    using store_type = std::unordered_map<endpoint, pool, endpoint::hf>;
     using lock = std::lock_guard<std::mutex>;
 
     std::mutex mutex_{};
     store_type store_{};
-    index_type index_{};
 
     store() = default;
+
+    pool& select_pool(const uri& u);
+
 public:
 
-    pool& get(const std::string& uri);
+    connection& get(const uri& u);
 
     static store& inst() noexcept;
 };

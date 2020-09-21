@@ -1,7 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <string_view>
+#include <memory>
 #include <cassert>
 #include "event2/http.h"
 

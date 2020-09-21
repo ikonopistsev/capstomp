@@ -2,17 +2,20 @@
 #include "pool.hpp"
 #include "journal.hpp"
 
+using namespace std::literals;
+
 namespace capst {
 
-
-pool& store::get(const std::string& uri)
+pool& store::select_pool(const uri& u)
 {
-    static constexpr auto max_pool_count = std::size_t{CAPSTOMP_MAX_POOL_COUNT};
+    static constexpr auto pool_max = std::size_t{CAPSTOMP_MAX_POOL_COUNT};
+
+    endpoint ep(u);
 
     lock l(mutex_);
 
-    auto f = index_.find(uri);
-    if (f != index_.end())
+    auto f = store_.find(ep);
+    if (f != store_.end())
     {
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
@@ -20,15 +23,12 @@ pool& store::get(const std::string& uri)
             return text;
         });
 #endif
-        return *f->second;
+        return f->second;
     }
 
-    if (store_.size() >= max_pool_count)
+    if (store_.size() >= pool_max)
         throw std::runtime_error("store: max_pool_count=" +
-                                 std::to_string(max_pool_count));
-
-    store_.emplace_front();
-    index_[uri] = store_.begin();
+                                 std::to_string(pool_max));
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
@@ -36,7 +36,19 @@ pool& store::get(const std::string& uri)
             return text;
         });
 #endif
-    return store_.front();
+    return store_[ep];
+}
+
+connection& store::get(const uri& u)
+{
+    // парсим настройки
+    auto s = settings::create(u);
+
+    // выбираем пулл
+    auto& pool = select_pool(u);
+
+    // выбираем подключение
+    return pool.get(s);
 }
 
 store& store::inst() noexcept

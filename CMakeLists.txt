@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.0.2 LANGUAGES CXX)
+project(capstomp VERSION 2.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,13 +24,13 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-set(CAPSTOMP_POOL_SOCKETS "256" CACHE STRING "count of cached soktest in pool")
+set(CAPSTOMP_POOL_SOCKETS "32" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
 set(CAPSTOMP_MAX_POOL_SOCKETS "512" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_COUNT "32" CACHE STRING "max of sockets pools")
+set(CAPSTOMP_MAX_POOL_COUNT "128" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
 option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)
@@ -47,6 +47,7 @@ set(sources
     src/store.cpp
     src/journal.cpp
     src/connection.cpp
+    src/settings.cpp
 )
 
 include_directories("/usr/include/mysql")

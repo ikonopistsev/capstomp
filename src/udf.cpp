@@ -1,9 +1,12 @@
 #include "store.hpp"
 #include "journal.hpp"
 #include "mysql.hpp"
+#include "uri.hpp"
 
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
+
+//#define CAPSTOMP_STAPPE_TEST
 
 #ifdef CAPSTOMP_STAPPE_TEST
 #include <thread>
@@ -14,14 +17,15 @@ using namespace std::literals;
 // журнал работы
 const capst::journal capst_journal;
 
+struct version
+{
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
-constexpr static std::string_view capst_version = STR(CAPSTOMP_PLUGIN_VERSION);
+    constexpr static std::string_view capst_version =
+        STR(CAPSTOMP_PLUGIN_VERSION);
 #undef STR_HELPER
 #undef STR
 
-struct version
-{
     version() noexcept
     {
         capst_journal.cout([&]{
@@ -70,8 +74,8 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
             return 1;
         }
 
-        std::string uri(args->args[0], args->lengths[0]);
-        if (uri.empty())
+        std::string u(args->args[0], args->lengths[0]);
+        if (u.empty())
         {
             strncpy(msg, "empty uri, use "
                 "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])",
@@ -79,22 +83,22 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
             return 1;
         }
 
+        // парсим урл
+        capst::uri uri(u);
         // получаем хранилище
         auto& store = capst::store::inst();
 
         // получаем пулл соединенией
-        auto& pool = store.get(uri);
+        auto& conn = store.get(uri);
 
-        // получаем соединение из пула
-        conn = &pool.get();
         // подключаемся либо повтороно используем соединение
-        conn->connect(uri);
+        conn.connect(uri);
 
         initid->maybe_null = 0;
         initid->const_item = 0;
 
         // сохраняем
-        initid->ptr = reinterpret_cast<char*>(conn);
+        initid->ptr = reinterpret_cast<char*>(&conn);
 
         return 0;
     }
@@ -188,30 +192,16 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 {
     try
     {
-        std::string_view routing_key(args->args[1], args->lengths[1]);
-
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
-
         std::string destination(conn->destination());
+        std::string_view routing_key(args->args[1], args->lengths[1]);
         if (!routing_key.empty())
         {
             destination += '/';
             destination += routing_key;
         }
 
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
-            std::string text = "connection: transaction_id=";
-            text += conn->transaction_id();
-            text += " content to destintation=";
-            text += destination;
-            return text;
-        });
-#endif
-
         stompconn::send frame(destination);
-        frame.push(stomptalk::header::time_since_epoch());
-        frame.push(stomptalk::header::transaction(conn->transaction_id()));
 
         if (!capstomp_fill_headers(frame, args, 3))
         {
@@ -221,17 +211,6 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 
         btpro::buffer payload;
         payload.append_ref(args->args[2], args->lengths[2]);
-
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
-            std::string text = "connection: transaction_id=";
-            text += conn->transaction_id();
-            text += " send payload size:";
-            text += std::to_string(payload.size());
-            return text;
-        });
-#endif
-
         frame.payload(std::move(payload));
 
 #ifdef CAPSTOMP_STAPPE_TEST
@@ -240,12 +219,12 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         static bool stappe = true;
         if (stappe)
         {
-            stoppe = false;
+            stappe = false;
             std::this_thread::sleep_for(std::chrono::seconds(30));
         }
 #endif
 
-        return static_cast<long long>(conn->send(std::move(frame)));
+        return static_cast<long long>(conn->send_content(std::move(frame)));
     }
     catch (const std::exception& e)
     {

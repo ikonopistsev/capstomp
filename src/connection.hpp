@@ -1,6 +1,8 @@
 #pragma once
 
-#include "uri.hpp"
+#include "journal.hpp"
+#include "endpoint.hpp"
+#include "settings.hpp"
 #include "transaction.hpp"
 
 #include "stompconn/stomplay.hpp"
@@ -29,22 +31,22 @@ public:
 
 private:
     pool& pool_;
+    // настройки коннекта
+    connection_settings conf_;
     // указатель на позицию в пуле коннектов
     connection_id_type self_{};
+
+    // название транзакции
+    std::string transaction_id_{};
     // указатель на выполняемую транзакцию
     transaction_id_type transaction_{};
-    // connection string
-    std::string uri_{};
-    std::string destination_{};
-    std::string transaction_id_{};
+
     // stomp protocol error
     std::string error_{};
-    std::size_t receipt_id_{};
-    bool wait_receipt_{false};
-    std::size_t transaction_receipt_{};
+    std::size_t receipt_seq_{};
+    bool receipt_received_{true};
 
-    // connection timeout
-    int timeout_{10000};
+    std::string destination_{};
 
     btpro::socket socket_{};
     stompconn::stomplay stomplay_{};
@@ -58,7 +60,7 @@ public:
     void close() noexcept;
 
     // lock and connect
-    void connect(std::string_view uri);
+    void connect(const uri& uri);
 
     template<class F>
     std::size_t send(F frame)
@@ -66,16 +68,33 @@ public:
         return frame.write_all(socket_);
     }
 
+    std::size_t send(stompconn::logon frame)
+    {
+        // опрация логона всегда ожидает ответ
+        // тк выполняется после подключения
+        // запускаем ожидание приема
+        receipt_received_ = false;
+
+        // отправляем данные
+        return frame.write_all(socket_);
+    }
+
+    std::size_t send_content(stompconn::send frame);
+
     template<class T, class F>
     std::size_t send(T frame, const std::string& receipt_id, F fn)
     {
-        if (transaction_receipt_)
+        // если есть чего ожидать
+        if (!receipt_id.empty())
         {
             frame.push(stomptalk::header::receipt(receipt_id));
 
+            // запускаем ожидание приема
+            receipt_received_ = false;
+
             stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
-                // завершаем ожидание квитанции
-                wait_receipt_ = false;
+                // квитанция получена
+                receipt_received_ = true;
                 // вызываем
                 fn(std::move(packet));
             });
@@ -84,8 +103,37 @@ public:
         return send(std::move(frame));
     }
 
-    // управление таймаутом на получение ответа
-    void set(int timeout) noexcept;
+    template<class F>
+    std::size_t send(stompconn::send frame, const std::string& receipt_id, F fn)
+    {
+        // используем ли таймстамп
+        if (conf_.timestamp())
+            frame.push(stomptalk::header::time_since_epoch());
+
+        // используется ли транзакция
+        if (!transaction_id_.empty())
+            frame.push(stomptalk::header::transaction(transaction_id_));
+
+        // если есть чего ожидать
+        if (!receipt_id.empty())
+        {
+            frame.push(stomptalk::header::receipt(receipt_id));
+
+            // запускаем ожидание приема
+            receipt_received_ = false;
+
+            stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
+                // квитанция получена
+                receipt_received_ = true;
+                // вызываем
+                fn(std::move(packet));
+            });
+        }
+
+        return send(std::move(frame));
+    }
+
+    void set(const connection_settings& conf);
 
     // задание указателя на хранилище коннектов
     void set(connection_id_type self) noexcept;
@@ -99,7 +147,7 @@ public:
     // вернуть соединение
     void release();
 
-    std::string_view destination() const noexcept
+    const std::string& destination() const noexcept
     {
         return destination_;
     }
@@ -116,13 +164,11 @@ public:
 
     std::string create_receipt_id(std::string_view action);
 
-    void read_receipt(int timeout);
-
 private:
 
     bool connected();
 
-    void logon(const uri& u, int timeout);
+    void logon(const uri& u);
 
     void begin();
 
@@ -130,7 +176,7 @@ private:
 
     bool ready_read(int timeout);
 
-    void read_logon(int timeout);
+    void read();
 
     bool read_stomp();
 

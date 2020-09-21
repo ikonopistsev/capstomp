@@ -1,5 +1,6 @@
 #pragma once
 
+#include "settings.hpp"
 #include "connection.hpp"
 #include "transaction.hpp"
 
@@ -35,7 +36,7 @@ class pool
 public:
     pool();
 
-    connection& get();
+    connection& get(const settings& conf);
 
     void release(connection_id_type connection_id);
 

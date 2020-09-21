@@ -19,7 +19,6 @@ class transaction
     data_type that_{ string_type(),
         date_type::now(), ready_type(), connection_type()};
 
-
 public:
     transaction() = default;
 
