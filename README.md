@@ -15,11 +15,8 @@ Each call of method blocks the DBMS trigger until the data is sent. The first ti
 * [stomptalk](https://github.com/ikonopistsev/stomptalk) STOMP protocol parser library
 * [stompconn](https://github.com/ikonopistsev/stompconn) simple STOMP connector
 * [libevent](https://github.com/libevent/libevent) event notification library
-* [RabbitMQ STOMP plugin](https://www.rabbitmq.com/stomp.html) RabbitMQ STOMP protocol support
-
-    or
-
-* [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) ActiveMQ with native STOMP protocol support
+* [RabbitMQ STOMP plugin](https://www.rabbitmq.com/stomp.html) for protocol support [OR]
+* [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) with native STOMP protocol support
 
 ## Building
 
