@@ -42,6 +42,12 @@ public:
 
     // подтверждаем свою операцию и возвращаем список коммитов
     transaction_store_type get_uncommited(transaction_id_type transaction_id);
+
+    std::string_view name() const noexcept
+    {
+        return name_;
+    }
+
 };
 
 } // namespace capst

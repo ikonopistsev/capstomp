@@ -24,8 +24,7 @@ public:
     using list_type = std::list<connection>;
     using connection_id_type = list_type::iterator;
 
-    using transaction_type =
-        transaction<btdef::util::basic_text<char, 64>, connection_id_type>;
+    using transaction_type = transaction<std::string, connection_id_type>;
     using transaction_store_type = std::list<transaction_type>;
     using transaction_id_type = transaction_store_type::iterator;
 
@@ -59,79 +58,12 @@ public:
 
     void close() noexcept;
 
+    void init() noexcept;
+
     // lock and connect
     void connect(const uri& uri);
 
-    template<class F>
-    std::size_t send(F frame)
-    {
-        return frame.write_all(socket_);
-    }
-
-    std::size_t send(stompconn::logon frame)
-    {
-        // опрация логона всегда ожидает ответ
-        // тк выполняется после подключения
-        // запускаем ожидание приема
-        receipt_received_ = false;
-
-        // отправляем данные
-        return frame.write_all(socket_);
-    }
-
     std::size_t send_content(stompconn::send frame);
-
-    template<class T, class F>
-    std::size_t send(T frame, const std::string& receipt_id, F fn)
-    {
-        // если есть чего ожидать
-        if (!receipt_id.empty())
-        {
-            frame.push(stomptalk::header::receipt(receipt_id));
-
-            // запускаем ожидание приема
-            receipt_received_ = false;
-
-            stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
-                // квитанция получена
-                receipt_received_ = true;
-                // вызываем
-                fn(std::move(packet));
-            });
-        }
-
-        return send(std::move(frame));
-    }
-
-    template<class F>
-    std::size_t send(stompconn::send frame, const std::string& receipt_id, F fn)
-    {
-        // используем ли таймстамп
-        if (conf_.timestamp())
-            frame.push(stomptalk::header::time_since_epoch());
-
-        // используется ли транзакция
-        if (!transaction_id_.empty())
-            frame.push(stomptalk::header::transaction(transaction_id_));
-
-        // если есть чего ожидать
-        if (!receipt_id.empty())
-        {
-            frame.push(stomptalk::header::receipt(receipt_id));
-
-            // запускаем ожидание приема
-            receipt_received_ = false;
-
-            stomplay_.add_handler(receipt_id, [&, fn](stompconn::packet packet){
-                // квитанция получена
-                receipt_received_ = true;
-                // вызываем
-                fn(std::move(packet));
-            });
-        }
-
-        return send(std::move(frame));
-    }
 
     void set(const connection_settings& conf);
 
@@ -162,8 +94,6 @@ public:
         return error_;
     }
 
-    std::string create_receipt_id(std::string_view action);
-
 private:
 
     bool connected();
@@ -171,6 +101,8 @@ private:
     void logon(const uri& u);
 
     void begin();
+
+    void commit_transaction(transaction_type& transaction);
 
     std::size_t commit(transaction_store_type transaction_store);
 
@@ -180,6 +112,56 @@ private:
 
     bool read_stomp();
 
+    std::size_t send(stompconn::logon frame);
+
+    std::string create_receipt_id(std::string_view transaction_id);
+
+#ifdef CAPSTOMP_TRACE_LOG
+    void trace_frame(std::string frame);
+#endif //
+
+    void trace_packet(const stompconn::packet& packet,
+                      const std::string& receipt_id);
+
+    template<class T>
+    std::size_t send(T frame, bool receipt)
+    {
+        if (receipt)
+        {
+            auto receipt_id = create_receipt_id(transaction_id_);
+            frame.push(stomptalk::header::receipt(receipt_id));
+
+            // запускаем ожидание приема
+            receipt_received_ = false;
+
+            stomplay_.add_handler(receipt_id,
+                                  [&, receipt_id](stompconn::packet packet){
+                // квитанция получена в любом случае
+                receipt_received_ = true;
+
+                if (!packet)
+                    error_ = packet.payload().str();
+
+                trace_packet(packet, receipt_id);
+            });
+        }
+        else
+        {
+            receipt_received_ = true;
+        }
+
+#ifdef CAPSTOMP_TRACE_LOG
+        trace_frame(frame.str());
+#endif //
+
+        return frame.write_all(socket_);
+    }
+
+    template<class T>
+    std::size_t send(T frame)
+    {
+        return send(std::move(frame), conf_.receipt());
+    }
 };
 
 } // namespace cs

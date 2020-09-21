@@ -11,24 +11,6 @@ using namespace std::literals;
 
 namespace capst {
 
-void connection::close() noexcept
-{
-#ifdef CAPSTOMP_TRACE_LOG
-    if (socket_.good())
-        capst_journal.cout([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: close socket=";
-            text += std::to_string(socket_.fd());
-            return text;
-        });
-#endif
-
-    socket_.close();
-
-    destination_.clear();
-}
-
 connection::connection(pool& pool)
     : pool_(pool)
 {
@@ -41,7 +23,7 @@ connection::connection(pool& pool)
             capst_journal.cout([&]{
                 std::string text;
                 text.reserve(64);
-                text += "connection: transaction_id="sv;
+                text += "connection: transaction:"sv;
                 text += transaction_id();
                 text += " error: "sv;
                 text += error_;
@@ -58,7 +40,7 @@ connection::connection(pool& pool)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "connection: transaction_id="sv;
+            text += "connection: transaction:"sv;
             text += transaction_id();
             text += " error: "sv;
             text += error_;
@@ -71,6 +53,29 @@ connection::connection(pool& pool)
 connection::~connection()
 {
     close();
+}
+
+void connection::close() noexcept
+{
+#ifdef CAPSTOMP_TRACE_LOG
+    if (socket_.good())
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: close socket=";
+            text += std::to_string(socket_.fd());
+            return text;
+        });
+#endif
+
+    socket_.close();
+    destination_.clear();
+}
+
+void connection::init() noexcept
+{
+    transaction_id_.clear();
+    error_.clear();
 }
 
 // подключаемся только на локалхост
@@ -94,8 +99,6 @@ void connection::connect(const uri& u)
         socket_.attach(fd);
 
         destination_ = u.fragment();
-        // сбрасываем ошибку
-        error_.clear();
 
         logon(u);
     }
@@ -155,7 +158,7 @@ void connection::logon(const uri& u)
             text += path;
             if (!transaction_id_.empty())
             {
-                text += " transaction_id="sv;
+                text += " transaction:"sv;
                 text += transaction_id_;
             }
             return text;
@@ -163,13 +166,7 @@ void connection::logon(const uri& u)
 #endif
 
     send(stompconn::logon(path, u.user(), u.passcode()));
-
-    // после подключения всегда ожидаем ответа
     read();
-
-    // не должно быть ошибок
-    if (!error_.empty())
-        throw std::runtime_error(error_);
 
     // должна быть получена сессия
     if (stomplay_.session().empty())
@@ -179,154 +176,27 @@ void connection::logon(const uri& u)
 void connection::begin()
 {
     // если транзакций нет - выходим
-    if (transaction_id_.empty())
-    {
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
-            std::string text;
-            text += "connection: transaction off"sv;
-            return text;
-        });
-#endif
+    if (!conf_.transaction())
         return;
-    }
 
-    stompconn::begin frame(transaction_id_);
-
-    // create_receipt_id может вернуть пустую строку
-    // когда прием квитанций отключен
-    auto receipt_id = create_receipt_id(transaction_id_);
-
-#ifdef CAPSTOMP_TRACE_LOG
-    capst_journal.cout([&]{
-        std::string text;
-        text.reserve(64);
-        text += "connection begin: transaction_id="sv;
-        text += transaction_id_;
-        if (!receipt_id.empty())
-        {
-            text += " receipt_id="sv;
-            text += receipt_id;
-        }
-        return text;
-    });
-#endif
-
-    // для проброса receipt_id надо захватить его по значению
-    send(std::move(frame), receipt_id,
-         [&, receipt_id](stompconn::packet receipt) {
-            if (!receipt)
-            {
-                capst_journal.cerr([&]{
-                    std::string text;
-                    text.reserve(64);
-                    text += "begin error: "sv;
-                    text += "transaction_id="sv;
-                    text += transaction_id_;
-                    text += " "sv;
-                    text += receipt.payload().str();
-                    return text;
-                });
-            }
-            else
-            {
-#ifdef CAPSTOMP_TRACE_LOG
-            capst_journal.cout([&]{
-                std::string text;
-                text.reserve(64);
-                text += "begin ok: "sv;
-                text += "transaction_id="sv;
-                text += transaction_id_;
-                text += " receipt_id="sv;
-                text += receipt_id;
-                return text;
-            });
-#endif //
-            }
-    });
-
+    send(stompconn::begin(transaction_id_), conf_.receipt());
     read();
-
-    if (!error_.empty())
-        throw std::runtime_error(error_);
 }
 
-std::size_t connection::commit(transaction_store_type transaction_store)
+void connection::commit_transaction(transaction_type& transaction)
 {
-    for (auto& transaction : transaction_store)
+    auto transaction_id = transaction.id();
+    auto connection_id = transaction.connection();
+
+    try
     {
-        auto transaction_id = transaction.id();
-        auto connection_id = transaction.connection();
         if (connection_id->connected())
         {
-            stompconn::commit frame(transaction_id);
-            auto receipt_id = connection_id->create_receipt_id(transaction_id);
-
-#ifdef CAPSTOMP_TRACE_LOG
-            capst_journal.cout([&]{
-                std::string text;
-                text.reserve(64);
-                text += "connection commit: transaction_id="sv;
-                text += transaction_id;
-                if (!receipt_id.empty())
-                {
-                    text += " receipt_id="sv;
-                    text += receipt_id;
-                }
-                return text;
-            });
-#endif
-
-            connection_id->send(std::move(frame), receipt_id,
-                [&, receipt_id](stompconn::packet receipt){
-                    if (!receipt)
-                    {
-                        capst_journal.cerr([&, receipt_id]{
-                            std::string text;
-                            text.reserve(64);
-                            text += "commit error: transaction_id=";
-                            text += transaction_id;
-                            text += " receipt_id="sv;
-                            text += receipt_id;
-                            return text;
-                        });
-                    }
-                    else
-                    {
-#ifdef CAPSTOMP_TRACE_LOG
-                        capst_journal.cout([&, receipt_id]{
-                            std::string text;
-                            text.reserve(64);
-                            text += "commit ok: transaction_id="sv;
-                            text += transaction_id;
-                            text += " receipt_id="sv;
-                            text += receipt_id;
-                            return text;
-                        });
-#endif
-                    }
-            });
-
+            connection_id->send(stompconn::commit(transaction_id));
             connection_id->read();
-
-            if (connection_id != self_)
-            {
-#ifdef CAPSTOMP_TRACE_LOG
-                capst_journal.cout([&]{
-                    std::string text;
-                    text.reserve(64);
-                    text += "connection: transaction_id="sv;
-                    text += transaction_id;
-                    text += " release deffered"sv;
-                    return text;
-                });
-#endif
-                pool_.release(connection_id);
-            }
         }
         else
         {
-#ifdef CAPSTOMP_TRACE_LOG
             capst_journal.cerr([&]{
                 std::string text;
                 text.reserve(64);
@@ -335,9 +205,51 @@ std::size_t connection::commit(transaction_store_type transaction_store)
                 text += " - connecton lost"sv;
                 return text;
             });
-#endif
         }
     }
+    catch (const std::exception& e)
+    {
+        capst_journal.cerr([&]{
+            std::string text;
+            text.reserve(64);
+            text += "error commit: "sv;
+            text += transaction_id;
+            text += " - "sv;
+            text += e.what();
+            return text;
+        });
+    }
+    catch (...)
+    {
+        capst_journal.cerr([&]{
+            std::string text;
+            text.reserve(64);
+            text += "error commit: "sv;
+            text += transaction_id;
+            return text;
+        });
+    }
+
+    if (connection_id != self_)
+    {
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: transaction:"sv;
+            text += transaction_id;
+            text += " release deffered"sv;
+            return text;
+        });
+#endif
+        pool_.release(connection_id);
+    }
+}
+
+std::size_t connection::commit(transaction_store_type transaction_store)
+{
+    for (auto& transaction : transaction_store)
+        commit_transaction(transaction);
 
     return transaction_store.size();
 }
@@ -375,8 +287,12 @@ void connection::read()
             }
         }
         else
-            throw std::runtime_error("read_receipt timeout");
+            throw std::runtime_error("recv timeout");
     }
+
+    // не должно быть ошибок
+    if (!error_.empty())
+        throw std::runtime_error(error_);
 }
 
 bool connection::read_stomp()
@@ -387,6 +303,7 @@ bool connection::read_stomp()
     if (btpro::code::fail == rc)
         throw std::runtime_error("read_stomp recv");
 
+    // парсим если чтото вычитали
     if (rc)
     {
         auto size = static_cast<std::size_t>(rc);
@@ -396,12 +313,14 @@ bool connection::read_stomp()
         return true;
     }
 
+    // иначе был дисконнект
     return false;
 }
 
 void connection::commit()
 {
-    if (!conf_.transaction() || commit(pool_.get_uncommited(transaction_)) > 0)
+    if (!conf_.transaction() ||
+        commit(pool_.get_uncommited(transaction_)) > 0)
     {
         // если что-то коммитили
         // то релизим и себя
@@ -417,12 +336,13 @@ void connection::release()
     capst_journal.cout([&]{
         std::string text;
         text.reserve(64);
-        text += "connection: release"sv;
+        text += "connection:"sv;
         if (!transaction_id_.empty())
         {
-            text += " transaction_id="sv;
+            text += " transaction:"sv;
             text += transaction_id_;
         }
+        text += " release"sv;
         return text;
     });
 #endif
@@ -437,19 +357,66 @@ void connection::release()
 std::string connection::create_receipt_id(std::string_view transaction_id)
 {
     std::string rc;
-    if (conf_.receipt())
+    rc.reserve(64);
+    rc = std::to_string(++receipt_seq_);
+    rc += '#';
+    rc += std::to_string(socket_.fd());
+    if (!transaction_id.empty())
     {
-        rc.reserve(64);
-        rc = std::to_string(++receipt_seq_);
-        rc += '#';
-        rc += std::to_string(socket_.fd());
-        if (!transaction_id.empty())
-        {
-            rc += 'T';
-            rc += transaction_id;
-        }
+        rc += 'T';
+        rc += transaction_id;
     }
     return rc;
+}
+
+#ifdef CAPSTOMP_TRACE_LOG
+void connection::trace_frame(std::string frame)
+{
+    capst_journal.cout([&]{
+        std::replace(frame.begin(), frame.end(), '\n', ' ');
+        std::string text;
+        text.reserve(64);
+        text += "connection: "sv;
+        text += frame;
+        return text;
+    });
+}
+#endif //
+
+void connection::trace_packet(const stompconn::packet& packet,
+    const std::string& receipt_id)
+{
+    if (!packet)
+    {
+        capst_journal.cerr([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection error: receipt:"sv;
+            text += receipt_id;
+            if (!transaction_id_.empty())
+            {
+                text += " transaction:"sv;
+                text += transaction_id_;
+            }
+            text += " "sv;
+            text += error_;
+            return text;
+        });
+    }
+    else
+    {
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            auto dump = packet.dump();
+            std::replace(dump.begin(), dump.end(), '\n', ' ');
+            std::string text;
+            text.reserve(64);
+            text += "connection: "sv;
+            text += dump;
+            return text;
+        });
+#endif
+    }
 }
 
 std::size_t connection::send_content(stompconn::send frame)
@@ -458,122 +425,32 @@ std::size_t connection::send_content(stompconn::send frame)
     if (conf_.timestamp())
         frame.push(stomptalk::header::time_since_epoch());
 
-    auto payload_size = frame.payload_size();
-    auto receipt_id = create_receipt_id(transaction_id_);
-
+    auto receipt = conf_.receipt();
     // используется ли транзакция
     if (!transaction_id_.empty())
     {
         frame.push(stomptalk::header::transaction(transaction_id_));
 
-        // внутри транзакции (между begin и commit) не может быть подтверждений
-        receipt_id.clear();
+        // подтверждения не используются при между (begin и commit)
+        // сбрасываем ожидание подтверждения
+        receipt = false;
     }
 
-#ifdef CAPSTOMP_TRACE_LOG
-    capst_journal.cout([&]{
-        std::string text;
-        text.reserve(64);
-        text += "connection: send"sv;
-
-        text += " content to destintation="sv;
-        text += destination();
-
-        auto id = transaction_id();
-        if (!id.empty())
-        {
-            text += " transaction_id="sv;
-            text += id;
-        }
-
-        if (!receipt_id.empty())
-        {
-            text += " receipt_id="sv;
-            text += receipt_id;
-        }
-
-        if (payload_size)
-        {
-            text += " payload_size="sv;
-            text += std::to_string(payload_size);
-        }
-
-        return text;
-    });
-#endif
-
-    // если есть чего ожидать
-    if (!receipt_id.empty())
-    {
-        frame.push(stomptalk::header::receipt(receipt_id));
-
-        // запускаем ожидание приема
-        receipt_received_ = false;
-
-        stomplay_.add_handler(receipt_id, [&](stompconn::packet packet){
-            // квитанция получена
-            receipt_received_ = true;
-
-            if (!packet)
-            {
-                error_ = packet.payload().str();
-
-                capst_journal.cerr([&]{
-                    std::string text;
-                    text.reserve(64);
-                    text += "connection send error:";
-
-                    auto id = transaction_id();
-                    if (!id.empty())
-                    {
-                        text += " transaction_id=";
-                        text += id;
-                    }
-
-                    text += " receipt_id=";
-                    text += receipt_id;
-
-                    text += " destintation=";
-                    text += destination();
-
-                    text += " ";
-                    text += error_;
-                    return text;
-                });
-            }
-            else
-            {
-#ifdef CAPSTOMP_TRACE_LOG
-                capst_journal.cout([&]{
-                    std::string text;
-                    text.reserve(64);
-                    text += "connection send ok:";
-
-                    auto id = transaction_id();
-                    if (!id.empty())
-                    {
-                        text += " transaction_id=";
-                        text += id;
-                    }
-
-                    text += " receipt_id=";
-                    text += receipt_id;
-
-                    text += " destintation=";
-                    text += destination();
-
-                    return text;
-                });
-#endif
-            }
-        });
-    }
-
-    auto rc = frame.write_all(socket_);
-
+    auto rc = send(std::move(frame), receipt);
     read();
 
     return rc;
+}
+
+std::size_t connection::send(stompconn::logon frame)
+{
+    // опрация логона всегда ожидает ответ
+    // тк выполняется после подключения
+    // запускаем ожидание приема
+    receipt_received_ = false;
+
+    // отправляем данные
+    return frame.write_all(socket_);
 }
 
 } // namespace capst

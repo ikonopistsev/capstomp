@@ -6,7 +6,7 @@
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
 
-//#define CAPSTOMP_STAPPE_TEST
+#define CAPSTOMP_STAPPE_TEST
 
 #ifdef CAPSTOMP_STAPPE_TEST
 #include <thread>
@@ -89,16 +89,16 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
         auto& store = capst::store::inst();
 
         // получаем пулл соединенией
-        auto& conn = store.get(uri);
+        conn = &store.get(uri);
 
         // подключаемся либо повтороно используем соединение
-        conn.connect(uri);
+        conn->connect(uri);
 
         initid->maybe_null = 0;
         initid->const_item = 0;
 
         // сохраняем
-        initid->ptr = reinterpret_cast<char*>(&conn);
+        initid->ptr = reinterpret_cast<char*>(conn);
 
         return 0;
     }
@@ -202,7 +202,6 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         }
 
         stompconn::send frame(destination);
-
         if (!capstomp_fill_headers(frame, args, 3))
         {
             if (json)

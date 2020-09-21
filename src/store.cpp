@@ -19,7 +19,8 @@ pool& store::select_pool(const uri& u)
     {
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
-            std::string text = "store: get existing pool";
+            std::string text = "store: use existing pool:";
+            text += f->second.name();
             return text;
         });
 #endif
@@ -42,13 +43,13 @@ pool& store::select_pool(const uri& u)
 connection& store::get(const uri& u)
 {
     // парсим настройки
-    auto s = settings::create(u);
+    auto conf = settings::create(u);
 
     // выбираем пулл
     auto& pool = select_pool(u);
 
     // выбираем подключение
-    return pool.get(s);
+    return pool.get(conf);
 }
 
 store& store::inst() noexcept
