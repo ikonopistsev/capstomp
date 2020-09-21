@@ -183,7 +183,7 @@ void connection::begin()
     read();
 }
 
-void connection::commit_transaction(transaction_type& transaction)
+void connection::commit_transaction(transaction_type& transaction, bool single)
 {
     auto transaction_id = transaction.id();
     auto connection_id = transaction.connection();
@@ -192,7 +192,9 @@ void connection::commit_transaction(transaction_type& transaction)
     {
         if (connection_id->connected())
         {
-            connection_id->send(stompconn::commit(transaction_id));
+            // если коммитим несколько транзакций
+            // тогда ожидаем подтверждение каждой
+            connection_id->send(stompconn::commit(transaction_id), !single);
             connection_id->read();
         }
         else
@@ -248,10 +250,12 @@ void connection::commit_transaction(transaction_type& transaction)
 
 std::size_t connection::commit(transaction_store_type transaction_store)
 {
-    for (auto& transaction : transaction_store)
-        commit_transaction(transaction);
+    auto rc = transaction_store.size();
 
-    return transaction_store.size();
+    for (auto& transaction : transaction_store)
+        commit_transaction(transaction, rc == 1);
+
+    return rc;
 }
 
 bool connection::ready_read(int timeout)

@@ -6,7 +6,7 @@
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
 
-#define CAPSTOMP_STAPPE_TEST
+//#define CAPSTOMP_STAPPE_TEST
 
 #ifdef CAPSTOMP_STAPPE_TEST
 #include <thread>

@@ -102,7 +102,7 @@ private:
 
     void begin();
 
-    void commit_transaction(transaction_type& transaction);
+    void commit_transaction(transaction_type& transaction, bool single);
 
     std::size_t commit(transaction_store_type transaction_store);
 
