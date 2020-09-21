@@ -70,9 +70,9 @@ Sends a `json-data` to the given `destination` on the provided `uri`.
 #### Parameters
 
 * `uri` (string). "stomp://guest:guest@localhost/vhost#/stomp_destination/name" [STOMP destination](https://www.rabbitmq.com/stomp.html#d).
-* `routing-key` (string). routing key for exchanges, or empty ''
+* `routing-key` (string). routing key for exchanges, or empty '' [STOMP exchange destination](https://www.rabbitmq.com/stomp.html#d.ed).
 * `json-data` (string). The body of the message (typically json but it may any string).
-* `stomp-header` (mostly string). `round(unix_timestamp(now(4))*1000) as 'timestamp'` will add to STOMP header `timestamp=1599081164296`
+* `stomp-header` (mostly string). `round(unix_timestamp(now(4))*1000) as 'timestamp'` will add to STOMP header `timestamp=1599081164296`.
 
 #### Returns
 
