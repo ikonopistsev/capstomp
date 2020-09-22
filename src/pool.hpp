@@ -36,6 +36,8 @@ class pool
 public:
     pool();
 
+    pool(const std::string& name);
+
     connection& get(const settings& conf);
 
     void release(connection_id_type connection_id);

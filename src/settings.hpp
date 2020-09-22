@@ -19,6 +19,8 @@ protected:
     // connection timeout in milliseconds
     int connection_timeout_{ 10000 };
 
+    std::string pool_{};
+
     void parse(std::string_view query);
 
 public:
@@ -29,6 +31,11 @@ public:
     bool receipt() const noexcept;
 
     bool transaction() const noexcept;
+
+    const std::string& pool() const noexcept
+    {
+        return pool_;
+    }
 };
 
 class connection_settings

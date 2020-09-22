@@ -19,6 +19,10 @@ pool::pool()
     name_ += btdef::to_hex(reinterpret_cast<std::uint64_t>(this));
 }
 
+pool::pool(const std::string& name)
+    : name_(name)
+{   }
+
 connection& pool::get(const settings& conf)
 {
     static constexpr auto max_pool_socket =

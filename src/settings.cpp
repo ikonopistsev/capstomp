@@ -28,6 +28,7 @@ void settings::parse(std::string_view query)
             auto with_receipt = "receipt"sv;
             auto with_timestamp = "timestamp"sv;
             auto with_transaction = "transaction"sv;
+            auto with_pool = "pool"sv;
             for (auto h = hdr.tqh_first; h; h = h->next.tqe_next)
             {
                 auto key = h->key;
@@ -52,6 +53,10 @@ void settings::parse(std::string_view query)
                     else if (with_transaction == key)
                     {
                         transaction_ = read_bool(val);
+                    }
+                    else if (with_pool == key)
+                    {
+                        pool_ = val;
                     }
                 }
             }

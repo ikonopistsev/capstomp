@@ -1,7 +1,6 @@
 #pragma once
 
 #include "journal.hpp"
-#include "endpoint.hpp"
 #include "settings.hpp"
 #include "transaction.hpp"
 
@@ -61,7 +60,7 @@ public:
     void init() noexcept;
 
     // lock and connect
-    void connect(const uri& uri);
+    void connect(const uri& u);
 
     std::size_t send_content(stompconn::send frame);
 

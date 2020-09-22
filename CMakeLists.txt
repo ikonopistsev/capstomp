@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.1.1 LANGUAGES CXX)
+project(capstomp VERSION 2.1.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +30,7 @@ add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 set(CAPSTOMP_MAX_POOL_SOCKETS "512" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_COUNT "128" CACHE STRING "max of sockets pools")
+set(CAPSTOMP_MAX_POOL_COUNT "512" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
 option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)

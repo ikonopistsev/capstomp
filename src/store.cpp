@@ -6,15 +6,34 @@ using namespace std::literals;
 
 namespace capst {
 
-pool& store::select_pool(const uri& u)
+std::string endpoint(const uri& uri, const std::string& fragment)
+{
+    auto u = uri.user();
+    auto a = uri.addr();
+    auto p = uri.path();
+    auto f = fragment.empty() ? uri.fragment() : fragment;
+
+    std::string t;
+    t.reserve(u.size() + a.size() + p.size() + f.size() + 2);
+
+    t += u;
+    t += '@';
+    t += a;
+    t += p;
+    t += '#';
+    t += f;
+    return t;
+}
+
+pool& store::select_pool(const uri& u, const settings& conf)
 {
     static constexpr auto pool_max = std::size_t{CAPSTOMP_MAX_POOL_COUNT};
 
-    endpoint_type ep(u);
+    auto name = endpoint(u, conf.pool());
 
     lock l(mutex_);
 
-    auto f = store_.find(ep);
+    auto f = store_.find(name);
     if (f != store_.end())
     {
 #ifdef CAPSTOMP_TRACE_LOG
@@ -37,7 +56,8 @@ pool& store::select_pool(const uri& u)
             return text;
         });
 #endif
-    return store_[ep];
+
+    return store_[name];
 }
 
 connection& store::get(const uri& u)
@@ -46,7 +66,7 @@ connection& store::get(const uri& u)
     auto conf = settings::create(u);
 
     // выбираем пулл
-    auto& pool = select_pool(u);
+    auto& pool = select_pool(u, conf);
 
     // выбираем подключение
     return pool.get(conf);
