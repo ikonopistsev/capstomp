@@ -62,7 +62,7 @@ void connection::close() noexcept
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "connection: close socket=";
+            text += "connection: close socket="sv;
             text += std::to_string(socket_.fd());
             return text;
         });
@@ -293,7 +293,7 @@ bool connection::ready_read(int timeout)
             text.reserve(64);
             text += "connection: socket="sv;
             text += std::to_string(socket_.fd());
-            text += " POOLIN "sv;
+            text += " POOLIN="sv;
             text += std::to_string(rc);
             return text;
         });
@@ -335,14 +335,14 @@ bool connection::read_stomp()
     char input[2048];
     auto rc = ::recv(socket_.fd(), input, sizeof(input), 0);
     if (btpro::code::fail == rc)
-        throw std::runtime_error("read_stomp recv");
+        throw std::runtime_error("stomp recv");
 
     // парсим если чтото вычитали
     if (rc)
     {
         auto size = static_cast<std::size_t>(rc);
         if (size != stomplay_.parse(input, size))
-            throw std::runtime_error("read_stomp parse");
+            throw std::runtime_error("stomp parse");
 
         return true;
     }
@@ -432,7 +432,7 @@ void connection::trace_packet(const stompconn::packet& packet,
                 text += " transaction:"sv;
                 text += transaction_id_;
             }
-            text += " "sv;
+            text += ' ';
             text += error_;
             return text;
         });

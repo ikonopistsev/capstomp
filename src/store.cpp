@@ -38,8 +38,11 @@ pool& store::select_pool(const uri& u, const settings& conf)
     {
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
-            std::string text = "store: use existing pool:";
+            std::string text;
+            text += "store: use existing pool:"sv;
             text += f->second.name();
+            text += ", size="sv;
+            text += std::to_string(store_.size());
             return text;
         });
 #endif
@@ -52,7 +55,9 @@ pool& store::select_pool(const uri& u, const settings& conf)
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
-            std::string text = "store: create new pool";
+            std::string text;
+            text += "store: create new pool, size="sv;
+            text += std::to_string(store_.size());
             return text;
         });
 #endif

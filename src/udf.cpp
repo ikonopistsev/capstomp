@@ -30,12 +30,14 @@ struct version
 
         capst_journal.cout([&]{
             std::string text;
-            text += "ver: "sv;
+            text += 'v';
             text += capst_version;
-            text += " stompconn: v"sv;
+            text += ", stompconn v"sv;
             text += stompconn::version();
-            text += " stomptalk: v"sv;
+            text += ", stomptalk v"sv;
             text += stomptalk::version();
+            text += ", libevent v"sv;
+            text += btpro::queue::version();
             return text;
         });
     }
