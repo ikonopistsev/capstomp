@@ -19,30 +19,23 @@ const capst::journal capst_journal;
 
 struct version
 {
+    version() noexcept
+    {
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
-    constexpr static std::string_view capst_version =
-        STR(CAPSTOMP_PLUGIN_VERSION);
+        constexpr static std::string_view capst_version =
+            STR(CAPSTOMP_PLUGIN_VERSION);
 #undef STR_HELPER
 #undef STR
 
-    version() noexcept
-    {
         capst_journal.cout([&]{
-            auto text = std::mkstr(std::cref("ver: "));
+            std::string text;
+            text += "ver: "sv;
             text += capst_version;
-            return text;
-        });
-
-        capst_journal.cout([]{
-            auto text = std::mkstr(std::cref("stomptalk: v"));
-            text += stomptalk::version();
-            return text;
-        });
-
-        capst_journal.cout([]{
-            auto text = std::mkstr(std::cref("stompconn: v"));
+            text += " stompconn: v"sv;
             text += stompconn::version();
+            text += " stomptalk: v"sv;
+            text += stomptalk::version();
             return text;
         });
     }

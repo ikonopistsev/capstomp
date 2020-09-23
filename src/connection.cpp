@@ -24,8 +24,7 @@ connection::connection(pool& pool)
             capst_journal.cerr([&]{
                 std::string text;
                 text.reserve(64);
-                text += "connection error: "sv;
-                text += " destination="sv;
+                text += "connection error: destination="sv;
                 text += destination_;
                 text += ' ';
                 text += error_;
@@ -42,8 +41,7 @@ connection::connection(pool& pool)
         capst_journal.cerr([&]{
             std::string text;
             text.reserve(64);
-            text += "connection error: "sv;
-            text += " destination="sv;
+            text += "connection error: destination="sv;
             text += destination_;
             text += ' ';
             text += error_;
@@ -474,7 +472,6 @@ std::size_t connection::send_content(stompconn::send frame)
 
     auto rc = send(std::move(frame), receipt);
     read();
-
     return rc;
 }
 
