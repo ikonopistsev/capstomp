@@ -25,6 +25,9 @@ connection::connection(pool& pool)
                 std::string text;
                 text.reserve(64);
                 text += "connection error: "sv;
+                text += " destination="sv;
+                text += destination_;
+                text += ' ';
                 text += error_;
                 return text;
             });
@@ -40,6 +43,9 @@ connection::connection(pool& pool)
             std::string text;
             text.reserve(64);
             text += "connection error: "sv;
+            text += " destination="sv;
+            text += destination_;
+            text += ' ';
             text += error_;
             return text;
         });
