@@ -41,7 +41,7 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_STATIC_LIBEVENT=ON ..
 
 Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
 
-copy `libcapstomp.so` to mysql pugins directory (usaly to `/usr/lib/mysql/plugin` or same) then import methods
+copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
 ```
 CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
