@@ -18,35 +18,31 @@ connection::connection(pool& pool)
         receipt_received_ = true;
         if (!logon)
         {
-            error_ = logon.payload().str();
-#ifdef CAPSTOMP_TRACE_LOG
-            capst_journal.cout([&]{
+            auto error = logon.payload().str();
+            std::replace(error.begin(), error.end(), '\n', ' ');
+            error_ = error;
+            capst_journal.cerr([&]{
                 std::string text;
                 text.reserve(64);
-                text += "connection: transaction:"sv;
-                text += transaction_id();
-                text += " error: "sv;
+                text += "connection error: "sv;
                 text += error_;
                 return text;
             });
-#endif
         }
     });
 
     stomplay_.on_error([&](stompconn::packet packet){
         receipt_received_ = true;
-        error_ = packet.payload().str();
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        auto error = packet.dump();
+        std::replace(error.begin(), error.end(), '\n', ' ');
+        error_ = error;
+        capst_journal.cerr([&]{
             std::string text;
             text.reserve(64);
-            text += "connection: transaction:"sv;
-            text += transaction_id();
-            text += " error: "sv;
+            text += "connection error: "sv;
             text += error_;
             return text;
         });
-#endif
     });
 }
 
@@ -57,8 +53,8 @@ connection::~connection()
 
 void connection::close() noexcept
 {
-#ifdef CAPSTOMP_TRACE_LOG
     if (socket_.good())
+    {
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
@@ -66,7 +62,7 @@ void connection::close() noexcept
             text += std::to_string(socket_.fd());
             return text;
         });
-#endif
+    }
 
     socket_.close();
     destination_.clear();
@@ -84,6 +80,8 @@ void connection::connect(const uri& u)
     // проверяем связь и было ли отключение
     if (!connected())
     {
+        // сбрсим ошибку принудительного дисконнекта
+        error_.clear();
         // парсим адрес
         // и коннектимся на новый сокет
         btpro::sock_addr addr(u.addr());
@@ -92,6 +90,14 @@ void connection::connect(const uri& u)
         if (btpro::code::fail == fd)
             throw std::system_error(btpro::net::error_code(), "socket");
 
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: connect to "sv;
+            text += u.addr();
+            return text;
+        });
+
         auto res = ::connect(fd, addr.sa(), addr.size());
         if (btpro::code::fail == res)
             throw std::system_error(btpro::net::error_code(), "connect");
@@ -99,6 +105,14 @@ void connection::connect(const uri& u)
         socket_.attach(fd);
 
         destination_ = u.fragment();
+
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: logon to destination="sv;
+            text += destination_;
+            return text;
+        });
 
         logon(u);
     }
@@ -117,7 +131,7 @@ bool connection::connected()
     {
         if (!read_stomp())
         {
-            socket_.close();
+            close();
             return false;
         }
     }
@@ -269,6 +283,18 @@ bool connection::ready_read(int timeout)
     if (btpro::code::fail == rc)
         throw std::runtime_error("connection select");
 
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: socket="sv;
+            text += std::to_string(socket_.fd());
+            text += " POOLIN "sv;
+            text += std::to_string(rc);
+            return text;
+        });
+#endif
+
     return 1 == rc;
 }
 
@@ -282,7 +308,7 @@ void connection::read()
         {
             if (!read_stomp())
             {
-                socket_.close();
+                close();
 
                 if (!error_.empty())
                     error_ = "read_stomp disconnect"sv;
