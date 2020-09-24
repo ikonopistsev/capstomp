@@ -6,6 +6,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    option(CAPSTOMP_CLANG_LIBCXX "use clang libcxx" OFF)
+    if (CAPSTOMP_CLANG_LIBCXX)
+	add_compile_options("-nostdinc++")
+	include_directories("/usr/lib/llvm-11/include/c++/v1" "/usr/include/c++/v1")
+    endif()
+endif()
+
 add_subdirectory(stomptalk)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
@@ -55,10 +63,14 @@ include_directories("/usr/include/mysql")
 add_library(capstomp SHARED ${sources})
 
 option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" OFF)
-
 if (CAPSTOMP_STATIC_STDCPP)
     target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a event stomptalk stompconn)
 else()
     target_link_libraries(capstomp PRIVATE event stomptalk stompconn)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CAPSTOMP_CLANG_LIBCXX)
+	target_link_options(capstomp PRIVATE "-stdlib=libc++")
+    endif()
+endif()
