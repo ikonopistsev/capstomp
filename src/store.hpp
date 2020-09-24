@@ -25,6 +25,12 @@ public:
 
     connection& get(const uri& u);
 
+    std::string str();
+
+    void erase(const std::string& name);
+
+    void clear();
+
     static store& inst() noexcept;
 };
 

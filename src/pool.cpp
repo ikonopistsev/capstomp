@@ -14,6 +14,51 @@ std::string pool::create_transaction_id()
     return std::to_string(++sequence_) + '@' + name_;
 }
 
+void pool::destroy() noexcept
+{
+    try
+    {
+        std::unique_lock<std::mutex> l(mutex_);
+        while (!active_.empty())
+            cv_.wait(l);
+
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool destroy: "sv;
+            text += name_;
+            text += " ready: "sv;
+            text += std::to_string(ready_.size());
+            return text;
+        });
+#endif
+        ready_.clear();
+    }
+    catch (const std::exception& e)
+    {
+        capst_journal.cerr([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool destroy: "sv;
+            text += name_;
+            text += " error - "sv;
+            text += e.what();
+            return text;
+        });
+    }
+    catch (...)
+    {
+        capst_journal.cerr([&]{
+            std::string text;
+            text += "pool destroy: "sv;
+            text += name_;
+            text += " error"sv;
+            return text;
+        });
+    }
+}
+
 pool::pool()
 {
     name_ += btdef::to_hex(reinterpret_cast<std::uint64_t>(this));
@@ -22,6 +67,11 @@ pool::pool()
 pool::pool(const std::string& name)
     : name_(name)
 {   }
+
+pool::~pool() noexcept
+{
+    destroy();
+}
 
 connection& pool::get(const settings& conf)
 {
@@ -37,7 +87,9 @@ connection& pool::get(const settings& conf)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: using an existing connection, ready: "sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " using an existing connection, ready: "sv;
             text += std::to_string(ready_.size());
             text += " active: "sv;
             text += std::to_string(active_.size());
@@ -56,7 +108,9 @@ connection& pool::get(const settings& conf)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: create new connection, active: "sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " create new connection, active: "sv;
             text += std::to_string(active_.size());
             return text;
         });
@@ -86,7 +140,9 @@ connection& pool::get(const settings& conf)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: set connection deferred transaction:"sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " set connection deferred transaction:"sv;
             text += transaction_id->id();
             return text;
         });
@@ -109,7 +165,9 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: transaction:"sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " transaction:"sv;
             text += i->id();
             text += " ready"sv;
             return text;
@@ -131,7 +189,9 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: transaction:"sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " transaction:"sv;
             text += i->id();
             text += " deffered commit"sv;
             return text;
@@ -158,7 +218,9 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool: transaction:"sv;
+            text += "pool: "sv;
+            text += name_;
+            text += " transaction:"sv;
             text += i->id();
             text += " add commit"sv;
             return text;
@@ -174,7 +236,9 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     capst_journal.cout([&]{
         std::string text;
         text.reserve(64);
-        text += "pool: transaction store size="sv;
+        text += "pool: "sv;
+        text += name_;
+        text += " transaction store size="sv;
         text += std::to_string(transaction_store_.size());
         return text;
     });
@@ -195,7 +259,9 @@ void pool::release(connection_id_type connection_id)
     capst_journal.cout([&]{
         std::string text;
         text.reserve(64);
-        text += "pool: ready: "sv;
+        text += "pool: "sv;
+        text += name_;
+        text += " ready: "sv;
         text += std::to_string(ready_.size());
         text += " active: "sv;
         text += std::to_string(active_.size());
@@ -218,9 +284,23 @@ void pool::release(connection_id_type connection_id)
         conn.set(ready_.begin());
     }
     else
-    {
         active_.erase(connection_id);
-    }
+
+    if (active_.empty())
+        cv_.notify_one();
+}
+
+std::string pool::str()
+{
+    std::string rc;
+    lock l(mutex_);
+    rc += "pool: "sv;
+    rc += name_;
+    rc += " ready: "sv;
+    rc += std::to_string(ready_.size());
+    rc += " active: "sv;
+    rc += std::to_string(active_.size());
+    return rc;
 }
 
 } // namespace capst

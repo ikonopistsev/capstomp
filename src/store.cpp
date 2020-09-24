@@ -77,6 +77,36 @@ connection& store::get(const uri& u)
     return pool.get(conf);
 }
 
+std::string store::str()
+{
+    std::string rc;
+
+    lock l(mutex_);
+
+    for(auto& i: store_)
+    {
+        if (!rc.empty())
+            rc += '\n';
+        rc += std::get<0>(i);
+        rc += ' ';
+        rc += std::get<1>(i).str();
+    }
+
+    return rc;
+}
+
+void store::erase(const std::string& name)
+{
+    lock l(mutex_);
+    store_.erase(name);
+}
+
+void store::clear()
+{
+    lock l(mutex_);
+    store_.clear();
+}
+
 store& store::inst() noexcept
 {
     static store i;

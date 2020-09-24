@@ -283,3 +283,71 @@ extern "C" void capstomp_json_deinit(UDF_INIT* initid)
 {
     capstomp_deinit(initid);
 }
+
+// settings
+
+extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
+{
+    try
+    {
+        initid->maybe_null = 0;
+
+        auto& store = capst::store::inst();
+        auto result = store.str();
+        auto size = result.size();
+        if (size)
+        {
+            initid->ptr = new char[size + 1];
+            std::memcpy(initid->ptr, result.data(), size);
+            initid->ptr[size] = '\0';
+        }
+
+        return 0;
+    }
+    catch (const std::exception& e)
+    {
+        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
+
+        capst_journal.cerr([&]{
+            std::string text;
+            text += "capstomp_status_init: "sv;
+            text += e.what();
+            return text;
+        });
+    }
+    catch (...)
+    {
+        static const std::string text = "capstomp_status_init :*(";
+        strncpy(msg, text.data(), MYSQL_ERRMSG_SIZE);
+        capst_journal.cerr([&]{
+            return text;
+        });
+    }
+
+    return 1;
+}
+
+extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
+                       char*, unsigned long* length,
+                       char* is_null, char* error)
+{
+    *is_null = 0;
+    *error = 0;
+    *length = 0;
+
+    auto ptr = initid->ptr;
+    if (ptr)
+    {
+        *length = std::strlen(ptr);
+        return ptr;
+    }
+
+    static const char *e = "\0";
+    return const_cast<char*>(e);
+}
+
+extern "C" void capstomp_status_deinit(UDF_INIT* initid)
+{
+    delete[] initid->ptr;
+}
+

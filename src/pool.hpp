@@ -33,10 +33,14 @@ class pool
 
     std::string create_transaction_id();
 
+    void destroy() noexcept;
+
 public:
     pool();
 
     pool(const std::string& name);
+
+    ~pool() noexcept;
 
     connection& get(const settings& conf);
 
@@ -45,11 +49,7 @@ public:
     // подтверждаем свою операцию и возвращаем список коммитов
     transaction_store_type get_uncommited(transaction_id_type transaction_id);
 
-    std::string_view name() const noexcept
-    {
-        return name_;
-    }
-
+    std::string str();
 };
 
 } // namespace capst
