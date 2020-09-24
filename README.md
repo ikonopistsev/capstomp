@@ -2,11 +2,9 @@
 
 # capstomp
 
-`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) or [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol.
+`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) or [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol. Module has very hi performance based on pool of persistent tcp connections.
 
 To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html) is required.
-
-Each call of method blocks the DBMS trigger until the data is sent. The first time the method is called, it connects to the message broker and sends data. The next calls to the DBMS trigger use the already established connection.
 
 ## Requirements
 
@@ -41,7 +39,7 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_STATIC_LIBEVENT=ON ..
 
 Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
 
-copy `libcapstomp.so` to mysql pugins directory (usaly to `/usr/lib/mysql/plugin` or same) then import methods
+copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
 ```
 CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
