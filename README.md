@@ -2,7 +2,7 @@
 
 # capstomp
 
-`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) or [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol. Module has very hi performance based on pool of persistent tcp connections.
+`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [ActiveMQ Artemis](https://activemq.apache.org/components/artemis/) or [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol. Module has very hi performance based on pool of persistent tcp connections.
 
 To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html) is required.
 
@@ -13,8 +13,8 @@ To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html
 * [stomptalk](https://github.com/ikonopistsev/stomptalk) STOMP protocol parser library
 * [stompconn](https://github.com/ikonopistsev/stompconn) simple STOMP connector
 * [libevent](https://github.com/libevent/libevent) event notification library
-* [RabbitMQ with STOMP plugin](https://www.rabbitmq.com/stomp.html) for protocol support
-* [OR] [Apache ActiveMQ](https://en.wikipedia.org/wiki/Apache_ActiveMQ) with native STOMP protocol support
+* [ActiveMQ Artemis](http://activemq.apache.org/components/artemis/) with native STOMP protocol support
+* [OR] [RabbitMQ with STOMP plugin](https://www.rabbitmq.com/stomp.html) for protocol support
 
 ## Building
 
