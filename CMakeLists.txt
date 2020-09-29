@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(capstomp VERSION 2.1.4 LANGUAGES CXX)
-set(PROJECT_REVISION 3)
+set(PROJECT_REVISION 4)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -9,8 +9,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     option(CAPSTOMP_CLANG_LIBCXX "use clang libcxx" OFF)
     if (CAPSTOMP_CLANG_LIBCXX)
-	add_compile_options("-nostdinc++")
-	include_directories("/usr/lib/llvm-11/include/c++/v1" "/usr/include/c++/v1")
+    add_compile_options("-nostdinc++")
+    include_directories("/usr/lib/llvm-11/include/c++/v1" "/usr/include/c++/v1")
     endif()
 endif()
 
@@ -82,7 +82,7 @@ install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
 set(CAPSTOMP_CPACK_TARGET "deb10" CACHE STRING "deb10 sufix")
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to rabbitmq")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to message broker")
 set(CPACK_PACKAGE_CONTACT "admin@dev4.fun")
 set(CPACK_STRIP_FILES TRUE)
 
