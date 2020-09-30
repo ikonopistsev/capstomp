@@ -106,6 +106,8 @@ connection& pool::get(const settings& conf)
             text += name_;
             text += " create connection, active: "sv;
             text += std::to_string(active_.size());
+            text += ", max="sv;
+            text += std::to_string(max_pool_sockets);
             return text;
         });
 
