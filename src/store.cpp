@@ -213,8 +213,10 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
         auto size = result.size();
         if (size)
         {
-            capst_journal.cout([]{
-                return std::string("store status init memcpy");
+            capst_journal.cout([&]{
+                std::string text("store status init memcpy: ");
+                text += result;
+                return text;
             });
 
             initid->ptr = new char[size + 1];
@@ -256,6 +258,7 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
                        char* is_null, char* error)
 {
     *length = 0;
+    *is_null = 0;
 
     capst_journal.cout([]{
         return std::string("store status result");
