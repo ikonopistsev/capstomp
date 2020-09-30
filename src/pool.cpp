@@ -306,28 +306,17 @@ void pool::release(connection_id_type connection_id)
     }
 }
 
-std::string pool::json(bool in_line, std::size_t level)
+std::string pool::json()
 {
     std::string rc;
     rc.reserve(64);
 
-    auto t = in_line ? ""sv : "\t"sv;
-    auto n = in_line ? ""sv : "\n"sv;
-
     lock l(mutex_);
 
-    rc += "{"sv; rc += n;
-
-        rc.append(level, '\t');
-        rc += t; rc += "\"name\":\""sv; rc += name_; rc += "\""sv; rc += ','; rc += n;
-
-        rc.append(level, '\t');
-        rc += t; rc += "\"ready\":"sv; rc += std::to_string(ready_.size()); rc += ','; rc += n;
-
-        rc.append(level, '\t');
-        rc += t; rc += "\"active\":"sv; rc += std::to_string(active_.size()); rc += n;
-
-    rc.append(level, '\t');
+    rc += "{"sv;
+        rc += "\"name\":\""sv; rc += name_; rc += "\""sv; rc += ',';
+        rc += "\"ready\":"sv; rc += std::to_string(ready_.size()); rc += ',';
+        rc += "\"active\":"sv; rc += std::to_string(active_.size());
     rc += "}"sv;
 
     return rc;

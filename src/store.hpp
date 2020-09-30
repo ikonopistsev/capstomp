@@ -25,7 +25,7 @@ public:
 
     connection& get(const uri& u);
 
-    std::string json(bool in_line = false);
+    std::string json();
 
     void erase(const std::string& name);
 

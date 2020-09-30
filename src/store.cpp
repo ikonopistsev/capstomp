@@ -42,7 +42,7 @@ pool& store::select_pool(const uri& u, const std::string& forced_pool)
         capst_journal.cout([&]{
             std::string text;
             text += "store: use existing "sv;
-            text += f->second.json(true);
+            text += f->second.json();
             text += ", size="sv;
             text += std::to_string(store_.size());
             return text;
@@ -83,34 +83,31 @@ connection& store::get(const uri& u)
     return pool.get(conf);
 }
 
-std::string store::json(bool in_line)
+std::string store::json()
 {
     std::string rc;
     rc.reserve(256);
 
-    auto n = in_line ? ""sv : "\n"sv;
-    auto t = in_line ? ""sv : "\t"sv;
-    auto tt = in_line ? ""sv : "\t\t"sv;
     bool first_line = true;
-    auto level = in_line ? 0u : 2u;
 
     lock l(mutex_);
 
-    rc += '['; rc += n;
+    rc += '[';
 
     for(auto& i: store_)
     {
-        rc += t; if (!first_line) rc += ','; rc += '{'; rc += n;
+        if (!first_line)
+            rc += ',';
 
-            rc += tt; rc += "\"name\":\""sv; rc += std::get<0>(i); rc += "\","sv; rc += n;
-            rc += tt; rc += "\"pool\":"sv; rc += std::get<1>(i).json(in_line, level); rc += n;
-
-        rc += t; rc += '}'; rc += n;
+        rc += '{';
+            rc += "\"name\":\""sv; rc += std::get<0>(i); rc += "\","sv;
+            rc += "\"pool\":"sv; rc += std::get<1>(i).json();
+        rc += '}';
 
         first_line = false;
     }
 
-    rc += ']'; rc += n;
+    rc += ']';
 
     return rc;
 }
@@ -187,15 +184,6 @@ extern "C" my_bool capstomp_store_erase_init(UDF_INIT* initid,
     return 1;
 }
 
-extern "C" long long capstomp_store_erase(UDF_INIT*,
-    UDF_ARGS* args, char* is_null, char* error)
-{
-    return static_cast<long long>(1);
-}
-
-extern "C" void capstomp_store_erase_deinit(UDF_INIT*)
-{   }
-
 extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
 {
     try
@@ -204,10 +192,11 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
         initid->const_item = 0;
 
         auto& store = capst::store::inst();
-        auto result = store.json(true);
+        auto result = store.json();
         auto size = result.size();
         if (size)
         {
+            initid->max_length = size;
             initid->ptr = new char[size + 1];
             std::memcpy(initid->ptr, result.data(), size);
             initid->ptr[size] = '\0';
@@ -261,3 +250,15 @@ extern "C" void capstomp_status_deinit(UDF_INIT* initid)
 {
     delete[] initid->ptr;
 }
+
+
+// empty func
+
+extern "C" long long capstomp_store_erase(UDF_INIT*,
+    UDF_ARGS*, char*, char*)
+{
+    return static_cast<long long>(1);
+}
+
+extern "C" void capstomp_store_erase_deinit(UDF_INIT*)
+{   }

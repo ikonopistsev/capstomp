@@ -107,15 +107,19 @@ private:
 
     void begin();
 
-    void commit_transaction(transaction_type& transaction, bool single);
+    void commit_transaction(transaction_type& transaction, bool receipt);
 
     std::size_t commit(transaction_store_type transaction_store);
 
     bool ready_read(int timeout);
 
+    bool ready_write();
+
     void read();
 
     bool read_stomp();
+
+    std::size_t send(btpro::buffer buf);
 
     std::size_t send(stompconn::logon frame);
 
@@ -159,7 +163,7 @@ private:
         trace_frame(frame.str());
 #endif //
 
-        return frame.write_all(socket_);
+        return send(frame.data());
     }
 
     template<class T>

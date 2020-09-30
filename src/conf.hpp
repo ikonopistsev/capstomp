@@ -6,9 +6,10 @@ namespace capst {
 
 class conf
 {
-    static constexpr auto read_timeout_min = std::size_t{300u};
-    static constexpr auto read_timeout_def = std::size_t{20000u};
-    volatile std::size_t read_timeout_ = {read_timeout_def};
+    static constexpr auto timeout_min = std::size_t{300u};
+    static constexpr auto timeout_def = std::size_t{25000u};
+    static constexpr auto timeout_max = std::size_t{90000u};
+    volatile std::size_t timeout_ = {timeout_def};
 
     static constexpr auto max_pool_count_min = std::size_t{16u};
     static constexpr auto max_pool_count_def
@@ -39,9 +40,9 @@ class conf
 
 public:
 
-    static inline auto read_timeout() noexcept
+    static inline auto timeout() noexcept
     {
-        return inst().read_timeout_;
+        return inst().timeout_;
     }
 
     static inline auto max_pool_count() noexcept
@@ -69,7 +70,7 @@ public:
         return inst().enable_ != 0u;
     }
 
-    static void set_read_timeout(std::size_t value) noexcept;
+    static void set_timeout(std::size_t value) noexcept;
 
     static void set_max_pool_count(std::size_t value) noexcept;
 

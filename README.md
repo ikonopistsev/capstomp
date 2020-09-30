@@ -43,6 +43,13 @@ copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plug
 ```
 CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_status RETURNS STRING SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_store_erase RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_read_timeout RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_enable RETURNS integer SONAME 'libcapstomp.so';
 ```
 
 ## Example

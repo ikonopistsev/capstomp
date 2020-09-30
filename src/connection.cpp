@@ -81,6 +81,44 @@ void connection::init() noexcept
     error_.clear();
 }
 
+bool socket_ready_write(btpro::socket socket, int timeout)
+{
+    auto ev = pollfd{
+        socket.fd(), POLLOUT, 0
+    };
+
+    auto rc = poll(&ev, 1, timeout);
+    if (btpro::code::fail == rc)
+        throw std::system_error(btpro::net::error_code(), "poll");
+
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: socket="sv;
+            text += std::to_string(socket.fd());
+            text += " POLLOUT="sv;
+            text += std::to_string(rc);
+            return text;
+        });
+#endif
+
+    return 1 == rc;
+}
+
+void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
+{
+    auto rc = ::connect(socket.fd(), addr.sa(), addr.size());
+    if (btpro::code::fail != rc)
+    {
+        if (!btpro::socket::inprogress())
+            throw std::system_error(btpro::net::error_code(), "::connect");
+
+        if (!socket_ready_write(socket, timeout))
+            throw std::runtime_error("connect timeout");
+    }
+}
+
 // подключаемся только на локалхост
 void connection::connect(const uri& u)
 {
@@ -93,9 +131,9 @@ void connection::connect(const uri& u)
         // и коннектимся на новый сокет
         btpro::sock_addr addr(u.addr());
 
-        auto fd = ::socket(addr.family(), SOCK_STREAM, 0);
-        if (btpro::code::fail == fd)
-            throw std::system_error(btpro::net::error_code(), "socket");
+        btpro::socket socket;
+        // сокет создается неблокируемым
+        socket.create(addr.family(), btpro::sock_stream);
 
         capst_journal.cout([&]{
             std::string text;
@@ -105,11 +143,9 @@ void connection::connect(const uri& u)
             return text;
         });
 
-        auto res = ::connect(fd, addr.sa(), addr.size());
-        if (btpro::code::fail == res)
-            throw std::system_error(btpro::net::error_code(), "connect");
+        connect_sync(socket, addr, static_cast<int>(conf::timeout()));
 
-        socket_.attach(fd);
+        socket_ = socket;
 
         destination_ = u.fragment();
 
@@ -208,30 +244,38 @@ void connection::begin()
     read();
 }
 
-void connection::commit_transaction(transaction_type& transaction, bool single)
+void connection::commit_transaction(transaction_type& transaction, bool receipt)
 {
     auto transaction_id = transaction.id();
     auto connection_id = transaction.connection();
 
     try
     {
-        if (connection_id->connected())
+        if (receipt)
         {
-            // если коммитим несколько транзакций
-            // тогда ожидаем подтверждение каждой
-            connection_id->send(stompconn::commit(transaction_id), !single);
+            connection_id->send(stompconn::commit(transaction_id), receipt);
             connection_id->read();
         }
         else
         {
-            capst_journal.cerr([&]{
-                std::string text;
-                text.reserve(64);
-                text += "error commit: "sv;
-                text += transaction_id;
-                text += " - connecton lost"sv;
-                return text;
-            });
+            if (connection_id->connected())
+            {
+                // если коммитим несколько транзакций
+                // тогда ожидаем подтверждение каждой
+                connection_id->send(stompconn::commit(transaction_id), receipt);
+                connection_id->read();
+            }
+            else
+            {
+                capst_journal.cerr([&]{
+                    std::string text;
+                    text.reserve(64);
+                    text += "error commit: "sv;
+                    text += transaction_id;
+                    text += " - connecton lost"sv;
+                    return text;
+                });
+            }
         }
     }
     catch (const std::exception& e)
@@ -277,8 +321,12 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 {
     auto rc = transaction_store.size();
 
+    // если транзакция одна то используем флаг подтверждений из конфига
+    // если несколько то подтверждаем все
+    bool receipt = (rc == 1) ? conf_.receipt() : true;
+
     for (auto& transaction : transaction_store)
-        commit_transaction(transaction, rc == 1);
+        commit_transaction(transaction, receipt);
 
     return rc;
 }
@@ -292,7 +340,7 @@ bool connection::ready_read(int timeout)
     auto rc = poll(&ev, 1, timeout);
 
     if (btpro::code::fail == rc)
-        throw std::runtime_error("connection select");
+        throw std::system_error(btpro::net::error_code(), "poll");
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
@@ -309,27 +357,31 @@ bool connection::ready_read(int timeout)
     return 1 == rc;
 }
 
+bool connection::ready_write()
+{
+    return socket_ready_write(socket_, static_cast<int>(conf::timeout()));
+}
+
 void connection::read()
 {
-    auto read_timeout = conf::read_timeout();
     while (!receipt_received_)
     {
         // ждем события чтения
         // таймаут на разовое чтение
-        if (ready_read(read_timeout))
+        if (ready_read(static_cast<int>(conf::timeout())))
         {
             if (!read_stomp())
             {
                 close();
 
                 if (!error_.empty())
-                    error_ = "read_stomp disconnect"sv;
+                    error_ = "disconnect"sv;
 
                 receipt_received_ = true;
             }
         }
         else
-            throw std::runtime_error("recv timeout");
+            throw std::runtime_error("timeout");
     }
 
     // не должно быть ошибок
@@ -483,6 +535,30 @@ std::size_t connection::send_content(stompconn::send frame)
     return rc;
 }
 
+std::size_t connection::send(btpro::buffer data)
+{
+    auto rc = data.size();
+
+    do
+    {
+        if (ready_write())
+        {
+            auto rc = data.write(socket_);
+            if (btpro::code::fail == rc)
+            {
+                // проверяем на блокировку операции
+                if (!btpro::socket::wouldblock())
+                    throw std::system_error(btpro::net::error_code(), "send");
+            }
+        }
+        else
+            throw std::runtime_error("send timeout");
+    }
+    while (!data.empty());
+
+    return rc;
+}
+
 std::size_t connection::send(stompconn::logon frame)
 {
     // опрация логона всегда ожидает ответ
@@ -490,8 +566,7 @@ std::size_t connection::send(stompconn::logon frame)
     // запускаем ожидание приема
     receipt_received_ = false;
 
-    // отправляем данные
-    return frame.write_all(socket_);
+    return send(frame.data());
 }
 
 } // namespace capst
