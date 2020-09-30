@@ -2,6 +2,7 @@
 #include "journal.hpp"
 #include "mysql.hpp"
 #include "uri.hpp"
+#include <thread>
 
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
@@ -9,9 +10,6 @@
 //#define CAPSTOMP_STAPPE_TEST
 //#define CAPSTOMP_THROW_TEST
 
-#ifdef CAPSTOMP_STAPPE_TEST
-#include <thread>
-#endif
 
 using namespace std::literals;
 
@@ -39,6 +37,9 @@ struct version
             text += stomptalk::version();
             text += ", libevent v"sv;
             text += btpro::queue::version();
+            text += ", mysqld "sv;
+            std::hash<decltype (std::this_thread::get_id())> f;
+            text += std::to_string(f(std::this_thread::get_id()));
             return text;
         });
     }

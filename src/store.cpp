@@ -87,11 +87,13 @@ std::string store::json(bool in_line)
 {
     std::string rc;
     rc.reserve(256);
+
     auto n = in_line ? ""sv : "\n"sv;
     auto t = in_line ? ""sv : "\t"sv;
     auto tt = in_line ? ""sv : "\t\t"sv;
     bool first_line = true;
     auto level = in_line ? 0u : 2u;
+
     lock l(mutex_);
 
     rc += '['; rc += n;
@@ -176,7 +178,7 @@ extern "C" my_bool capstomp_store_erase_init(UDF_INIT* initid,
     catch (...)
     {
 
-        strncpy(msg, ":*(",MYSQL_ERRMSG_SIZE);
+        strncpy(msg, ":*(", MYSQL_ERRMSG_SIZE);
 
         capst_journal.cerr([&]{
             return ":*(";
@@ -202,14 +204,27 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
         initid->maybe_null = 0;
 
         auto& store = capst::store::inst();
+
+        capst_journal.cout([]{
+            return std::string("store status init json");
+        });
+
         auto result = store.json();
         auto size = result.size();
         if (size)
         {
+            capst_journal.cout([]{
+                return std::string("store status init memcpy");
+            });
+
             initid->ptr = new char[size + 1];
             std::memcpy(initid->ptr, result.data(), size);
             initid->ptr[size] = '\0';
         }
+
+        capst_journal.cout([]{
+            return std::string("store status init end");
+        });
 
         return 0;
     }
@@ -240,9 +255,11 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
                        char*, unsigned long* length,
                        char* is_null, char* error)
 {
-    *is_null = 0;
-    *error = 0;
     *length = 0;
+
+    capst_journal.cout([]{
+        return std::string("store status result");
+    });
 
     auto ptr = initid->ptr;
     if (ptr)
@@ -257,5 +274,9 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
 
 extern "C" void capstomp_status_deinit(UDF_INIT* initid)
 {
+    capst_journal.cout([]{
+        return std::string("store status delete");
+    });
+
     delete[] initid->ptr;
 }
