@@ -232,22 +232,24 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
     }
     catch (const std::exception& e)
     {
-        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
-
         capst_journal.cerr([&]{
             std::string text;
             text += "capstomp_status_init: "sv;
             text += e.what();
             return text;
         });
+
+        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
     }
     catch (...)
     {
         static const std::string text = "capstomp_status_init :*(";
-        strncpy(msg, text.data(), MYSQL_ERRMSG_SIZE);
+
         capst_journal.cerr([&]{
             return text;
         });
+
+        strncpy(msg, text.data(), MYSQL_ERRMSG_SIZE);
     }
 
     return 1;
@@ -257,9 +259,6 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
                        char*, unsigned long* length,
                        char* is_null, char* error)
 {
-    *length = 0;
-    *is_null = 0;
-
     capst_journal.cout([]{
         return std::string("store status result");
     });
@@ -268,11 +267,21 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
     if (ptr)
     {
         *length = std::strlen(ptr);
+
+        capst_journal.cout([]{
+            return std::string("store status result end");
+        });
+
         return ptr;
     }
 
-    static const char *e = "\0";
-    return const_cast<char*>(e);
+    capst_journal.cout([]{
+        return std::string("store status result null");
+    });
+
+    *length = 0;
+    *is_null = 1;
+    return nullptr;
 }
 
 extern "C" void capstomp_status_deinit(UDF_INIT* initid)
