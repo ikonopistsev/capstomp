@@ -24,7 +24,6 @@ void settings::parse(std::string_view query)
         struct evkeyvalq hdr = {};
         if (0 == evhttp_parse_query_str(query.data(), &hdr))
         {
-            auto timeout = "timeout"sv;
             auto with_receipt = "receipt"sv;
             auto with_timestamp = "timestamp"sv;
             auto with_transaction = "transaction"sv;
@@ -35,14 +34,7 @@ void settings::parse(std::string_view query)
                 auto val = h->value;
                 if (key && val)
                 {
-                    if (timeout == key)
-                    {
-                        auto t = std::atoi(val);
-                        if (t < 1)
-                            t = 10000;
-                        connection_timeout_ = t;
-                    }
-                    else if (with_receipt == key)
+                    if (with_receipt == key)
                     {
                         receipt_ = read_bool(val);
                     }
@@ -89,9 +81,4 @@ bool connection_settings::timestamp() const noexcept
 bool settings::transaction() const noexcept
 {
     return transaction_;
-}
-
-int connection_settings::timeout() const noexcept
-{
-    return connection_timeout_;
 }

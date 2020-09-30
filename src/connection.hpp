@@ -44,6 +44,7 @@ private:
     std::size_t receipt_seq_{};
     bool receipt_received_{true};
 
+    std::string passcode_{};
     std::string destination_{};
 
     btpro::socket socket_{};
@@ -77,6 +78,11 @@ public:
 
     // вернуть соединение
     void release();
+
+    bool good() const noexcept
+    {
+        return socket_.good();
+    }
 
     const std::string& destination() const noexcept
     {

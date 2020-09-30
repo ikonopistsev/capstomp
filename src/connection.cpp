@@ -1,6 +1,7 @@
 #include "connection.hpp"
 #include "journal.hpp"
 #include "pool.hpp"
+#include "conf.hpp"
 
 #include "btpro/sock_addr.hpp"
 
@@ -70,6 +71,8 @@ void connection::close() noexcept
 
     socket_.close();
     destination_.clear();
+    passcode_.clear();
+    error_.clear();
 }
 
 void connection::init() noexcept
@@ -81,11 +84,11 @@ void connection::init() noexcept
 // подключаемся только на локалхост
 void connection::connect(const uri& u)
 {
-    // проверяем связь и было ли отключение
-    if (!connected())
+    // проверяем было ли откличючение и совпадает ли пароль
+    if (!(connected() && (u.passcode() == passcode_)))
     {
-        // сбрсим ошибку принудительного дисконнекта
-        error_.clear();
+        // закроем сокет
+        close();
         // парсим адрес
         // и коннектимся на новый сокет
         btpro::sock_addr addr(u.addr());
@@ -183,12 +186,16 @@ void connection::logon(const uri& u)
         });
 #endif
 
-    send(stompconn::logon(path, u.user(), u.passcode()));
+    auto passcode = u.passcode();
+    send(stompconn::logon(path, u.user(), passcode));
     read();
 
     // должна быть получена сессия
     if (stomplay_.session().empty())
         throw std::runtime_error("stomplay: no session");
+
+    // сохраняем пароль
+    passcode_ = passcode;
 }
 
 void connection::begin()
@@ -304,11 +311,12 @@ bool connection::ready_read(int timeout)
 
 void connection::read()
 {
+    auto read_timeout = conf::read_timeout();
     while (!receipt_received_)
     {
         // ждем события чтения
         // таймаут на разовое чтение
-        if (ready_read(conf_.timeout()))
+        if (ready_read(read_timeout))
         {
             if (!read_stomp())
             {

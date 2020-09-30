@@ -16,9 +16,6 @@ protected:
     // use transaction
     bool transaction_{ true };
 
-    // connection timeout in milliseconds
-    int connection_timeout_{ 10000 };
-
     std::string pool_{};
 
     void parse(std::string_view query);
@@ -47,8 +44,6 @@ public:
     connection_settings(const settings& other);
 
     bool timestamp() const noexcept;
-
-    int timeout() const noexcept;
 };
 
 } // namespace capst

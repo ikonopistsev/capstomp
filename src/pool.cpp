@@ -1,4 +1,5 @@
 #include "pool.hpp"
+#include "conf.hpp"
 #include "journal.hpp"
 
 #include "btdef/text.hpp"
@@ -11,22 +12,20 @@ namespace capst {
 
 std::string pool::create_transaction_id()
 {
-    return std::to_string(++sequence_) + '@' + name_;
+    return std::to_string(++transaction_seq_) + '@' + name_;
 }
 
-void pool::destroy() noexcept
+void pool::clear() noexcept
 {
     try
     {
-        std::unique_lock<std::mutex> l(mutex_);
-        while (!active_.empty())
-            cv_.wait(l);
+        lock l(mutex_);
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
-            text += "pool destroy: "sv;
+            text += "pool clear: "sv;
             text += name_;
             text += " ready: "sv;
             text += std::to_string(ready_.size());
@@ -40,7 +39,7 @@ void pool::destroy() noexcept
         capst_journal.cerr([&]{
             std::string text;
             text.reserve(64);
-            text += "pool destroy: "sv;
+            text += "pool clear: "sv;
             text += name_;
             text += " error - "sv;
             text += e.what();
@@ -68,15 +67,9 @@ pool::pool(const std::string& name)
     : name_(name)
 {   }
 
-pool::~pool() noexcept
-{
-    destroy();
-}
-
 connection& pool::get(const settings& conf)
 {
-    static constexpr auto max_pool_socket =
-        std::size_t{CAPSTOMP_MAX_POOL_SOCKETS};
+    auto max_pool_sockets = conf::max_pool_sockets();
 
     lock l(mutex_);
 
@@ -100,21 +93,22 @@ connection& pool::get(const settings& conf)
     }
     else
     {
-        if (active_.size() >= max_pool_socket)
-            throw std::runtime_error("pool: max_pool_socket=" +
-                                     std::to_string(max_pool_socket));
+        if (active_.size() >= max_pool_sockets)
+        {
+            throw std::runtime_error("pool: max pool sockets=" +
+                                     std::to_string(max_pool_sockets));
+        }
 
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
             text += name_;
-            text += " create new connection, active: "sv;
+            text += " create connection, active: "sv;
             text += std::to_string(active_.size());
             return text;
         });
-#endif
+
         active_.emplace_front(*this);
     }
 
@@ -251,55 +245,89 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
 
 void pool::release(connection_id_type connection_id)
 {
-    static constexpr auto pool_socket = std::size_t{CAPSTOMP_POOL_SOCKETS};
+    auto pool_sockets = conf::pool_sockets();
 
     lock l(mutex_);
 
+    if (connection_id->good() && (ready_.size() < pool_sockets))
+    {
 #ifdef CAPSTOMP_TRACE_LOG
-    capst_journal.cout([&]{
-        std::string text;
-        text.reserve(64);
-        text += "pool: "sv;
-        text += name_;
-        text += " ready: "sv;
-        text += std::to_string(ready_.size());
-        text += " active: "sv;
-        text += std::to_string(active_.size());
-        text += " store connection"sv;
-        auto id = connection_id->transaction_id();
-        if (!id.empty())
-        {
-            text += ": transaction:"sv;
-            text += connection_id->transaction_id();
-        }
-        return text;
-    });
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool: "sv;
+            text += name_;
+            text += " ready: "sv;
+            text += std::to_string(ready_.size());
+            text += " active: "sv;
+            text += std::to_string(active_.size());
+            text += " store connection"sv;
+            auto id = connection_id->transaction_id();
+            if (!id.empty())
+            {
+                text += ": transaction:"sv;
+                text += connection_id->transaction_id();
+            }
+            return text;
+        });
 #endif
 
-    if (ready_.size() < pool_socket)
-    {
         // перемещаем соединенеи в список готовых к работе
         ready_.splice(ready_.begin(), active_, connection_id);
         auto& conn = ready_.front();
         conn.set(ready_.begin());
     }
     else
-        active_.erase(connection_id);
+    {
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool: "sv;
+            text += name_;
+            text += " ready: "sv;
+            text += std::to_string(ready_.size());
+            text += " active: "sv;
+            text += std::to_string(active_.size());
+            text += " erase connection"sv;
+            auto id = connection_id->transaction_id();
+            if (!id.empty())
+            {
+                text += ": transaction:"sv;
+                text += connection_id->transaction_id();
+            }
+            return text;
+        });
+#endif
 
-    if (active_.empty())
-        cv_.notify_one();
+        active_.erase(connection_id);
+    }
 }
 
-std::string pool::str()
+std::string pool::json(bool in_line, std::size_t level)
 {
     std::string rc;
+    rc.reserve(64);
+
+    auto t = in_line ? ""sv : "\t"sv;
+    auto n = in_line ? ""sv : "\n"sv;
+
     lock l(mutex_);
-    rc += "pool: "sv;
-    rc += name_;
-    rc += " ready: "sv;
-    rc += std::to_string(ready_.size());
-    rc += " active: "sv;
-    rc += std::to_string(active_.size());
+
+    rc += "{"sv; rc += n;
+
+        rc.append(level, '\t');
+        rc += t; rc += "\"name\":\""sv; rc += name_; rc += "\""sv; rc += ','; rc += n;
+
+        rc.append(level, '\t');
+        rc += t; rc += "\"ready\":"sv; rc += std::to_string(ready_.size()); rc += ','; rc += n;
+
+        rc.append(level, '\t');
+        rc += t; rc += "\"active\":"sv; rc += std::to_string(active_.size()); rc += n;
+
+    rc.append(level, '\t');
+    rc += "}"sv;
+
     return rc;
 }
 

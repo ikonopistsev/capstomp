@@ -7,6 +7,7 @@
 #include "stomptalk/version.hpp"
 
 //#define CAPSTOMP_STAPPE_TEST
+//#define CAPSTOMP_THROW_TEST
 
 #ifdef CAPSTOMP_STAPPE_TEST
 #include <thread>
@@ -185,9 +186,10 @@ bool capstomp_fill_headers(stompconn::send& frame,
 long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
                    char* is_null, char* error)
 {
+    auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+
     try
     {
-        auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
         std::string destination(conn->destination());
         std::string_view routing_key(args->args[1], args->lengths[1]);
         if (!routing_key.empty())
@@ -218,6 +220,10 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         }
 #endif
 
+#ifdef CAPSTOMP_THROW_TEST
+        throw std::runtime_error("capstomp throw test");
+#endif
+
         return static_cast<long long>(conn->send_content(std::move(frame)));
     }
     catch (const std::exception& e)
@@ -235,6 +241,8 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 
     *is_null = 0;
     *error = 1;
+
+    conn->close();
 
     return 0;
 }
@@ -284,70 +292,5 @@ extern "C" void capstomp_json_deinit(UDF_INIT* initid)
     capstomp_deinit(initid);
 }
 
-// settings
 
-extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
-{
-    try
-    {
-        initid->maybe_null = 0;
-
-        auto& store = capst::store::inst();
-        auto result = store.str();
-        auto size = result.size();
-        if (size)
-        {
-            initid->ptr = new char[size + 1];
-            std::memcpy(initid->ptr, result.data(), size);
-            initid->ptr[size] = '\0';
-        }
-
-        return 0;
-    }
-    catch (const std::exception& e)
-    {
-        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
-
-        capst_journal.cerr([&]{
-            std::string text;
-            text += "capstomp_status_init: "sv;
-            text += e.what();
-            return text;
-        });
-    }
-    catch (...)
-    {
-        static const std::string text = "capstomp_status_init :*(";
-        strncpy(msg, text.data(), MYSQL_ERRMSG_SIZE);
-        capst_journal.cerr([&]{
-            return text;
-        });
-    }
-
-    return 1;
-}
-
-extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
-                       char*, unsigned long* length,
-                       char* is_null, char* error)
-{
-    *is_null = 0;
-    *error = 0;
-    *length = 0;
-
-    auto ptr = initid->ptr;
-    if (ptr)
-    {
-        *length = std::strlen(ptr);
-        return ptr;
-    }
-
-    static const char *e = "\0";
-    return const_cast<char*>(e);
-}
-
-extern "C" void capstomp_status_deinit(UDF_INIT* initid)
-{
-    delete[] initid->ptr;
-}
 

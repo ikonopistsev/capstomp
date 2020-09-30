@@ -19,13 +19,13 @@ class store
 
     store() = default;
 
-    pool& select_pool(const uri& u, const settings& conf);
+    pool& select_pool(const uri& u, const std::string& forced_pool);
 
 public:
 
     connection& get(const uri& u);
 
-    std::string str();
+    std::string json(bool in_line = false);
 
     void erase(const std::string& name);
 

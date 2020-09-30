@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.1.4 LANGUAGES CXX)
+project(capstomp VERSION 2.1.5 LANGUAGES CXX)
 set(PROJECT_REVISION 4)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,13 +32,13 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-set(CAPSTOMP_POOL_SOCKETS "32" CACHE STRING "count of cached soktest in pool")
+set(CAPSTOMP_POOL_SOCKETS "8" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_SOCKETS "512" CACHE STRING "max sockets in pool")
+set(CAPSTOMP_MAX_POOL_SOCKETS "128" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_COUNT "512" CACHE STRING "max of sockets pools")
+set(CAPSTOMP_MAX_POOL_COUNT "256" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
 option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)
@@ -51,6 +51,7 @@ add_definitions("-DHAVE_DLOPEN")
 
 set(sources
     src/udf.cpp
+    src/conf.cpp
     src/pool.cpp
     src/store.cpp
     src/journal.cpp
@@ -71,7 +72,7 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (CAPSTOMP_CLANG_LIBCXX)
-	target_link_options(capstomp PRIVATE "-stdlib=libc++")
+        target_link_options(capstomp PRIVATE "-stdlib=libc++")
     endif()
 endif()
 
