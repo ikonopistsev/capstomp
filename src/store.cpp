@@ -201,7 +201,8 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
 {
     try
     {
-        initid->maybe_null = 0;
+        initid->maybe_null = 1;
+        initid->const_item = 0;
 
         auto& store = capst::store::inst();
 
@@ -266,6 +267,7 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
     auto ptr = initid->ptr;
     if (ptr)
     {
+        *error = 0;
         *length = std::strlen(ptr);
 
         capst_journal.cout([]{
@@ -275,10 +277,12 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
         return ptr;
     }
 
+
     capst_journal.cout([]{
         return std::string("store status result null");
     });
 
+    *error = 1;
     *length = 0;
     *is_null = 1;
     return nullptr;
