@@ -3,6 +3,8 @@
 #include "mysql.hpp"
 #include "uri.hpp"
 #include <thread>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
@@ -37,9 +39,8 @@ struct version
             text += stomptalk::version();
             text += ", libevent v"sv;
             text += btpro::queue::version();
-            text += ", mysqld "sv;
-            std::hash<decltype (std::this_thread::get_id())> f;
-            text += std::to_string(f(std::this_thread::get_id()));
+            text += ", mysqld pid="sv;
+            text += std::to_string(getpid());
             return text;
         });
     }
