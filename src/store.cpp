@@ -160,8 +160,7 @@ extern "C" my_bool capstomp_store_erase_init(UDF_INIT* initid,
         }
 
         auto& store = capst::store::inst();
-        std::string name(args->args[0], args->lengths[0]);
-        store.erase(name);
+        store.erase(std::string(args->args[0], args->lengths[0]));
 
         initid->maybe_null = 0;
         initid->const_item = 0;
@@ -205,29 +204,14 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
         initid->const_item = 0;
 
         auto& store = capst::store::inst();
-
-        capst_journal.cout([]{
-            return std::string("store status init json");
-        });
-
         auto result = store.json(true);
         auto size = result.size();
         if (size)
         {
-            capst_journal.cout([&]{
-                std::string text("store status init memcpy: ");
-                text += result;
-                return text;
-            });
-
             initid->ptr = new char[size + 1];
             std::memcpy(initid->ptr, result.data(), size);
             initid->ptr[size] = '\0';
         }
-
-        capst_journal.cout([]{
-            return std::string("store status init end");
-        });
 
         return 0;
     }
@@ -260,27 +244,12 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
                        char*, unsigned long* length,
                        char* is_null, char* error)
 {
-    capst_journal.cout([]{
-        return std::string("store status result");
-    });
-
     auto ptr = initid->ptr;
     if (ptr)
     {
-        *error = 0;
         *length = std::strlen(ptr);
-
-        capst_journal.cout([]{
-            return std::string("store status result end");
-        });
-
         return ptr;
     }
-
-
-    capst_journal.cout([]{
-        return std::string("store status result null");
-    });
 
     *error = 1;
     *length = 0;
@@ -290,9 +259,5 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
 
 extern "C" void capstomp_status_deinit(UDF_INIT* initid)
 {
-    capst_journal.cout([]{
-        return std::string("store status delete");
-    });
-
     delete[] initid->ptr;
 }
