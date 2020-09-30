@@ -209,7 +209,7 @@ extern "C" my_bool capstomp_status_init(UDF_INIT* initid, UDF_ARGS*, char* msg)
             return std::string("store status init json");
         });
 
-        auto result = store.json();
+        auto result = store.json(true);
         auto size = result.size();
         if (size)
         {
