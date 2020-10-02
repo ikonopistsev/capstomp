@@ -446,7 +446,7 @@ void connection::release()
 
     transaction_id_.clear();
 
-    if (request_count_ > conf::request_limit())
+    if (request_count_ >= conf::request_limit())
         request_count_ = std::size_t();
 
     // возможно это уничтожит этот объект
