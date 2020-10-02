@@ -18,6 +18,14 @@ journal::~journal() noexcept
     closelog();
 }
 
+void journal::set_level(int level) noexcept
+{
+    if (level > 1)
+        mask_ = LOG_UPTO(LOG_DEBUG);
+    else
+        mask_ = (level == 1) ? LOG_UPTO(LOG_NOTICE) : LOG_UPTO(LOG_ERR);
+}
+
 void journal::output(int level, const char *str) const noexcept
 {
     assert(str);
@@ -35,7 +43,13 @@ int journal::notice_level() const noexcept
     return LOG_NOTICE;
 }
 
+int journal::trace_level() const noexcept
+{
+    return LOG_DEBUG;
+}
+
 bool journal::level_allow(int level) const noexcept
 {
     return (mask_ & LOG_MASK(level)) != 0;
 }
+

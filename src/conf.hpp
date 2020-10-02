@@ -26,13 +26,16 @@ class conf
     // число одновременно подключенных сокетов от udf к брокеру
     volatile std::size_t pool_sockets_ = {pool_sockets_def};
 
-    static constexpr auto request_limit_min = std::size_t{64u};
-    static constexpr auto request_limit_def = std::size_t{4096u};
+    static constexpr auto request_limit_min = std::size_t{4u};
+    static constexpr auto request_limit_def = std::size_t{1024u};
     // число запросов, переданных через соединение,
-    // до его принудительного закрытия
+    // до принудительного получение квитанции от кролика
     volatile std::size_t request_limit_ = {request_limit_def};
 
     volatile std::size_t enable_ = std::size_t{1u};
+
+    static constexpr auto verbose_max = std::size_t{2u};
+    volatile std::size_t verbose_ = std::size_t{0u};
 
     conf() = default;
 
@@ -70,6 +73,11 @@ public:
         return inst().enable_ != 0u;
     }
 
+    static inline std::size_t verbose() noexcept
+    {
+        return inst().verbose_;
+    }
+
     static void set_timeout(std::size_t value) noexcept;
 
     static void set_max_pool_count(std::size_t value) noexcept;
@@ -81,6 +89,8 @@ public:
     static void set_request_limit(std::size_t value) noexcept;
 
     static void set_enable(std::size_t value) noexcept;
+
+    static void set_verbose(std::size_t value) noexcept;
 };
 
 } // namespace capst

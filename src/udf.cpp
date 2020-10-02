@@ -16,7 +16,7 @@
 using namespace std::literals;
 
 // журнал работы
-const capst::journal capst_journal;
+capst::journal capst_journal;
 
 struct version
 {
@@ -133,7 +133,7 @@ bool capstomp_fill_headers(stompconn::send& frame,
 
 #ifdef CAPSTOMP_TRACE_LOG
     if (from < args->arg_count) {
-        capst_journal.cout([]{
+        capst_journal.trace([]{
             return std::string("connection: fill headers");
         });
     }
@@ -189,7 +189,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
                    char* is_null, char* error)
 {
     auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
-
+    conn->set_state(5);
     try
     {
         std::string destination(conn->destination());
@@ -254,6 +254,7 @@ extern "C" void capstomp_deinit(UDF_INIT* initid)
     try
     {
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+        conn->set_state(7);
         // возможно, это уничтожит этот объект соединения
         conn->commit();
     }

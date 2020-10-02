@@ -71,7 +71,8 @@ void connection::close() noexcept
 
     socket_.close();
     destination_.clear();
-    passcode_.clear();
+    passhash_ = std::size_t();
+    request_count_ = std::size_t();
     error_.clear();
 }
 
@@ -81,10 +82,10 @@ void connection::init() noexcept
     error_.clear();
 }
 
-bool socket_ready_write(btpro::socket socket, int timeout)
+int socket_poll(btpro::socket socket, short int events, int timeout)
 {
     auto ev = pollfd{
-        socket.fd(), POLLOUT, 0
+        socket.fd(), events, {}
     };
 
     auto rc = poll(&ev, 1, timeout);
@@ -92,18 +93,33 @@ bool socket_ready_write(btpro::socket socket, int timeout)
         throw std::system_error(btpro::net::error_code(), "poll");
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([socket, events, timeout, revents = ev.revents]{
             std::string text;
             text.reserve(64);
             text += "connection: socket="sv;
             text += std::to_string(socket.fd());
-            text += " POLLOUT="sv;
-            text += std::to_string(rc);
+            if (events & POLLOUT)
+            {
+                text += " POLLOUT="sv;
+                text += std::to_string(revents & POLLOUT);
+            }
+            if (events & POLLIN)
+            {
+                text += " POLLIN="sv;
+                text += std::to_string(revents & POLLIN);
+            }
+            text += " timeout="sv;
+            text += std::to_string(timeout);
             return text;
         });
 #endif
 
-    return 1 == rc;
+    return ev.revents;
+}
+
+bool socket_ready_write(btpro::socket socket, int timeout)
+{
+    return (POLLOUT & socket_poll(socket, POLLOUT, timeout)) > 0;
 }
 
 void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
@@ -122,8 +138,12 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 // подключаемся только на локалхост
 void connection::connect(const uri& u)
 {
+    set_state(2);
+
+    std::hash<std::string_view> hf;
+    auto passhash = hf(u.passcode());
     // проверяем было ли откличючение и совпадает ли пароль
-    if (!(connected() && (u.passcode() == passcode_)))
+    if (!(connected() && (passhash == passhash_)))
     {
         // закроем сокет
         close();
@@ -140,6 +160,8 @@ void connection::connect(const uri& u)
             text.reserve(64);
             text += "connection: connect to "sv;
             text += u.addr();
+            text += " socket="sv;
+            text += std::to_string(socket.fd());
             return text;
         });
 
@@ -149,15 +171,10 @@ void connection::connect(const uri& u)
 
         destination_ = u.fragment();
 
-        capst_journal.cout([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: logon to destination="sv;
-            text += destination_;
-            return text;
-        });
-
         logon(u);
+
+        // сохраняем пароль
+        passhash_ = passhash;
     }
 
     // начинаем транзакцию
@@ -200,47 +217,50 @@ void connection::set(transaction_id_type id) noexcept
 
 void connection::logon(const uri& u)
 {
+    set_state(3);
+
     auto path = u.rpath();
 
     if (path.empty())
         path = "/"sv;
 
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: logon user="sv;
-            text += u.user();
-            text += " vhost="sv;
-            text += path;
-            if (!transaction_id_.empty())
-            {
-                text += " transaction:"sv;
-                text += transaction_id_;
-            }
-            return text;
-        });
-#endif
+    capst_journal.cout([&]{
+        std::string text;
+        text.reserve(64);
+        text += "logon user="sv;
+        text += u.user();
+        text += " vhost="sv;
+        text += path;
+        text += " destination="sv;
+        text += destination_;
+        text += " socket="sv;
+        text += std::to_string(socket_.fd());
+        if (!transaction_id_.empty())
+        {
+            text += " transaction:"sv;
+            text += transaction_id_;
+        }
+        return text;
+    });
 
-    auto passcode = u.passcode();
-    send(stompconn::logon(path, u.user(), passcode));
+    send(stompconn::logon(path, u.user(), u.passcode()));
     read();
 
     // должна быть получена сессия
     if (stomplay_.session().empty())
         throw std::runtime_error("stomplay: no session");
-
-    // сохраняем пароль
-    passcode_ = passcode;
 }
 
 void connection::begin()
 {
+    set_state(4);
+    ++request_count_;
+
     // если транзакций нет - выходим
     if (!conf_.transaction())
         return;
 
-    send(stompconn::begin(transaction_id_), conf_.receipt());
+    send(stompconn::begin(transaction_id_), is_receipt());
     read();
 }
 
@@ -251,6 +271,8 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
     try
     {
+        connection_id->set_state(9);
+
         if (receipt)
         {
             connection_id->send(stompconn::commit(transaction_id), receipt);
@@ -304,7 +326,7 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
     if (connection_id != self_)
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "connection: transaction:"sv;
@@ -319,11 +341,12 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
 std::size_t connection::commit(transaction_store_type transaction_store)
 {
+    set_state(8);
     auto rc = transaction_store.size();
 
     // если транзакция одна то используем флаг подтверждений из конфига
     // если несколько то подтверждаем все
-    bool receipt = (rc == 1) ? conf_.receipt() : true;
+    bool receipt = (rc == 1) ? is_receipt() : true;
 
     for (auto& transaction : transaction_store)
         commit_transaction(transaction, receipt);
@@ -333,33 +356,12 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 
 bool connection::ready_read(int timeout)
 {
-    auto ev = pollfd{
-        socket_.fd(), POLLIN, 0
-    };
-
-    auto rc = poll(&ev, 1, timeout);
-
-    if (btpro::code::fail == rc)
-        throw std::system_error(btpro::net::error_code(), "poll");
-
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: socket="sv;
-            text += std::to_string(socket_.fd());
-            text += " POOLIN="sv;
-            text += std::to_string(rc);
-            return text;
-        });
-#endif
-
-    return 1 == rc;
+    return (POLLIN & ready(timeout)) > 0;
 }
 
-bool connection::ready_write()
+int connection::ready(int timeout)
 {
-    return socket_ready_write(socket_, static_cast<int>(conf::timeout()));
+    return socket_poll(socket_, POLLIN|POLLOUT, timeout);
 }
 
 void connection::read()
@@ -427,7 +429,7 @@ void connection::commit()
 void connection::release()
 {
 #ifdef CAPSTOMP_TRACE_LOG
-    capst_journal.cout([&]{
+    capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
         text += "connection:"sv;
@@ -440,8 +442,12 @@ void connection::release()
         return text;
     });
 #endif
+    set_state(10);
 
     transaction_id_.clear();
+
+    if (request_count_ > conf::request_limit())
+        request_count_ = std::size_t();
 
     // возможно это уничтожит этот объект
     // дальше им пользоваться уже нельзя
@@ -463,10 +469,17 @@ std::string connection::create_receipt_id(std::string_view transaction_id)
     return rc;
 }
 
+bool connection::is_receipt() noexcept
+{
+    auto receipt = conf_.receipt();
+    return (!receipt) ?
+        request_count_ >= conf::request_limit() : receipt;
+}
+
 #ifdef CAPSTOMP_TRACE_LOG
 void connection::trace_frame(std::string frame)
 {
-    capst_journal.cout([&]{
+    capst_journal.trace([&]{
         std::replace(frame.begin(), frame.end(), '\n', ' ');
         std::string text;
         text.reserve(64);
@@ -500,7 +513,7 @@ void connection::trace_packet(const stompconn::packet& packet,
     else
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             auto dump = packet.dump();
             std::replace(dump.begin(), dump.end(), '\n', ' ');
             std::string text;
@@ -515,11 +528,13 @@ void connection::trace_packet(const stompconn::packet& packet,
 
 std::size_t connection::send_content(stompconn::send frame)
 {
+    set_state(6);
+
     // используем ли таймстамп
     if (conf_.timestamp())
         frame.push(stomptalk::header::time_since_epoch());
 
-    auto receipt = conf_.receipt();
+    auto receipt = is_receipt();
     // используется ли транзакция
     if (!transaction_id_.empty())
     {
@@ -538,10 +553,25 @@ std::size_t connection::send_content(stompconn::send frame)
 std::size_t connection::send(btpro::buffer data)
 {
     auto rc = data.size();
-
     do
     {
-        if (ready_write())
+        auto ev = ready(conf::timeout());
+        // сокет неожиданно стал доступен на запись
+        // а мы ничего не ждем
+        if (ev & POLLIN)
+        {
+            if (!read_stomp())
+            {
+                close();
+
+                if (!error_.empty())
+                    error_ = "disconnect"sv;
+            }
+
+            throw std::runtime_error("protocol error");
+        }
+
+        if (ev & POLLOUT)
         {
             auto rc = data.write(socket_);
             if (btpro::code::fail == rc)

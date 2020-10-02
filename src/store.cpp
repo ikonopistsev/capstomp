@@ -39,7 +39,7 @@ pool& store::select_pool(const uri& u, const std::string& forced_pool)
     if (f != store_.end())
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text += "store: use existing "sv;
             text += f->second.json();

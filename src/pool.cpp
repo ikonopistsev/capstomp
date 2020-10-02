@@ -22,7 +22,7 @@ void pool::clear() noexcept
         lock l(mutex_);
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool clear: "sv;
@@ -77,7 +77,7 @@ connection& pool::get(const settings& conf)
     if (i != ready_.end())
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -116,6 +116,9 @@ connection& pool::get(const settings& conf)
 
     // получаем соединение
     auto& conn = active_.front();
+
+    conn.set_state(1);
+
     // получаем указатель на соединение
     auto connection_id = active_.begin();
     // выставляем указатель
@@ -133,7 +136,7 @@ connection& pool::get(const settings& conf)
             transaction_store_.end(), create_transaction_id(), connection_id);
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -158,7 +161,7 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     lock l(mutex_);
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -182,7 +185,7 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     if (i != b)
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -211,7 +214,7 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     while (i->ready() && (i != e))
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -229,7 +232,7 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     rc.splice(rc.begin(), transaction_store_, b, i);
 
 #ifdef CAPSTOMP_TRACE_LOG
-    capst_journal.cout([&]{
+    capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
         text += "pool: "sv;
@@ -253,8 +256,9 @@ void pool::release(connection_id_type connection_id)
 
     if (connection_id->good() && (ready_.size() < pool_sockets))
     {
+        connection_id->set_state(11);
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -282,7 +286,7 @@ void pool::release(connection_id_type connection_id)
     else
     {
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.cout([&]{
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -315,9 +319,32 @@ std::string pool::json()
 
     rc += "{"sv;
         rc += "\"name\":\""sv; rc += name_; rc += "\""sv; rc += ',';
-        rc += "\"ready\":"sv; rc += std::to_string(ready_.size()); rc += ',';
-        rc += "\"active\":"sv; rc += std::to_string(active_.size());
+        rc += "\"ready\":"sv; rc += json_arr(ready_); rc += ',';
+        rc += "\"active\":"sv; rc += json_arr(active_);
     rc += "}"sv;
+
+    return rc;
+}
+
+std::string pool::json_arr(list_type& list)
+{
+    std::string rc;
+    std::string tmp;
+    tmp.reserve(64);
+    rc += '[';
+    for (auto& c: list)
+    {
+        if (!tmp.empty())
+            tmp += ',';
+
+        tmp += '[';
+        tmp += std::to_string(c.socket().fd());
+        tmp += ',';
+        tmp += std::to_string(c.state());
+        tmp += ']';
+    }
+    rc += tmp;
+    rc += ']';
 
     return rc;
 }

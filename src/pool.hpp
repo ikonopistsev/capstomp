@@ -11,9 +11,11 @@ namespace capst {
 
 class pool
 {
+public:
     using list_type = connection::list_type;
     using connection_id_type = connection::connection_id_type;
 
+private:
     std::mutex mutex_{};
     using lock = std::lock_guard<std::mutex>;
 
@@ -54,6 +56,10 @@ public:
     transaction_store_type get_uncommited(transaction_id_type transaction_id);
 
     std::string json();
+
+private:
+
+    std::string json_arr(list_type& list);
 };
 
 } // namespace capst

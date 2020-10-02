@@ -13,6 +13,7 @@
 #include <list>
 #include <mutex>
 #include <cassert>
+#include <atomic>
 
 namespace capst {
 
@@ -44,11 +45,14 @@ private:
     std::size_t receipt_seq_{};
     bool receipt_received_{true};
 
-    std::string passcode_{};
+    std::size_t passhash_{};
     std::string destination_{};
 
     btpro::socket socket_{};
     stompconn::stomplay stomplay_{};
+
+    std::size_t request_count_{};
+    std::atomic<std::size_t> state_{};
 
 public:
 
@@ -84,6 +88,21 @@ public:
         return socket_.good();
     }
 
+    btpro::socket socket() const noexcept
+    {
+        return socket_;
+    }
+
+    void set_state(std::size_t n)
+    {
+        state_ = n;
+    }
+
+    std::size_t state() const noexcept
+    {
+        return state_;
+    }
+
     const std::string& destination() const noexcept
     {
         return destination_;
@@ -113,7 +132,7 @@ private:
 
     bool ready_read(int timeout);
 
-    bool ready_write();
+    int ready(int timeout);
 
     void read();
 
@@ -124,6 +143,8 @@ private:
     std::size_t send(stompconn::logon frame);
 
     std::string create_receipt_id(std::string_view transaction_id);
+
+    bool is_receipt() noexcept;
 
 #ifdef CAPSTOMP_TRACE_LOG
     void trace_frame(std::string frame);
@@ -169,7 +190,7 @@ private:
     template<class T>
     std::size_t send(T frame)
     {
-        return send(std::move(frame), conf_.receipt());
+        return send(std::move(frame), is_receipt());
     }
 };
 
