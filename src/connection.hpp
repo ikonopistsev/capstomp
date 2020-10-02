@@ -132,7 +132,7 @@ private:
 
     bool ready_read(int timeout);
 
-    int ready(int timeout);
+    int ready(short int events, int timeout);
 
     void read();
 

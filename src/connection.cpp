@@ -93,25 +93,25 @@ int socket_poll(btpro::socket socket, short int events, int timeout)
         throw std::system_error(btpro::net::error_code(), "poll");
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([socket, events, timeout, revents = ev.revents]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: socket="sv;
-            text += std::to_string(socket.fd());
-            if (events & POLLOUT)
-            {
-                text += " POLLOUT="sv;
-                text += std::to_string(revents & POLLOUT);
-            }
-            if (events & POLLIN)
-            {
-                text += " POLLIN="sv;
-                text += std::to_string(revents & POLLIN);
-            }
-            text += " timeout="sv;
-            text += std::to_string(timeout);
-            return text;
-        });
+    capst_journal.trace([socket, events, timeout, revents = ev.revents]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: socket="sv;
+        text += std::to_string(socket.fd());
+        if (events & POLLOUT)
+        {
+            text += " POLLOUT="sv;
+            text += std::to_string(revents & POLLOUT);
+        }
+        if (events & POLLIN)
+        {
+            text += " POLLIN="sv;
+            text += std::to_string(revents & POLLIN);
+        }
+        text += " timeout="sv;
+        text += std::to_string(timeout);
+        return text;
+    });
 #endif
 
     return ev.revents;
@@ -356,12 +356,12 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 
 bool connection::ready_read(int timeout)
 {
-    return (POLLIN & ready(timeout)) > 0;
+    return (POLLIN & ready(POLLIN, timeout)) > 0;
 }
 
-int connection::ready(int timeout)
+int connection::ready(short int events, int timeout)
 {
-    return socket_poll(socket_, POLLIN|POLLOUT, timeout);
+    return socket_poll(socket_, events, timeout);
 }
 
 void connection::read()
@@ -555,7 +555,8 @@ std::size_t connection::send(btpro::buffer data)
     auto rc = data.size();
     do
     {
-        auto ev = ready(conf::timeout());
+        auto ev = ready(POLLIN|POLLOUT,
+            static_cast<int>(conf::timeout()));
         // сокет неожиданно стал доступен на запись
         // а мы ничего не ждем
         if (ev & POLLIN)
