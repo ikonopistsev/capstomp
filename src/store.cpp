@@ -128,6 +128,24 @@ void store::erase(const std::string& name)
     store_.erase(f);
 }
 
+void store::commit(const std::string& name)
+{
+    lock l(mutex_);
+
+    auto f = store_.find(name);
+    if (f == store_.end())
+        throw std::runtime_error("store commit: " + name + " - not found");
+
+    auto count = f->second.force_commit();
+    capst_journal.cout([count]{
+        std::string text;
+        text.reserve(64);
+        text += "store: force commited: "sv;
+        text += std::to_string(count);
+        return text;
+    });
+}
+
 void store::clear()
 {
     lock l(mutex_);
@@ -141,6 +159,48 @@ store& store::inst() noexcept
 }
 
 } // namespace capst
+
+extern "C" my_bool capstomp_store_commit_init(UDF_INIT* initid,
+    UDF_ARGS* args, char* msg)
+{
+    try
+    {
+        auto args_count = args->arg_count;
+        if ((args_count != 1) ||
+            (!(args->arg_type[0] == STRING_RESULT)) || (args->lengths[0] == 0))
+        {
+            strncpy(msg, "bad args, use capstomp_store_commit(\"pool_name\")",
+                MYSQL_ERRMSG_SIZE);
+            return 1;
+        }
+
+        auto& store = capst::store::inst();
+        store.commit(std::string(args->args[0], args->lengths[0]));
+
+        initid->maybe_null = 0;
+        initid->const_item = 0;
+
+        return my_bool();
+    }
+    catch (const std::exception& e)
+    {
+        capst_journal.cerr([&]{
+            return std::string(e.what());
+        });
+        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
+    }
+    catch (...)
+    {
+
+        strncpy(msg, ":*(", MYSQL_ERRMSG_SIZE);
+
+        capst_journal.cerr([&]{
+            return ":*(";
+        });
+    }
+
+    return 1;
+}
 
 extern "C" my_bool capstomp_store_erase_init(UDF_INIT* initid,
     UDF_ARGS* args, char* msg)
@@ -261,4 +321,13 @@ extern "C" long long capstomp_store_erase(UDF_INIT*,
 }
 
 extern "C" void capstomp_store_erase_deinit(UDF_INIT*)
+{   }
+
+extern "C" long long capstomp_commit_erase(UDF_INIT*,
+    UDF_ARGS*, char*, char*)
+{
+    return static_cast<long long>(1);
+}
+
+extern "C" void capstomp_store_commit_deinit(UDF_INIT*)
 {   }

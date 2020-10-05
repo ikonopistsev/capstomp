@@ -452,6 +452,11 @@ void connection::commit()
         release();
 }
 
+void connection::force_commit()
+{
+    commit_transaction(*transaction_, true);
+}
+
 void connection::release()
 {
 #ifdef CAPSTOMP_TRACE_LOG

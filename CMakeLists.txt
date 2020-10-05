@@ -32,13 +32,13 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-set(CAPSTOMP_POOL_SOCKETS "8" CACHE STRING "count of cached soktest in pool")
+set(CAPSTOMP_POOL_SOCKETS "16" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_SOCKETS "128" CACHE STRING "max sockets in pool")
+set(CAPSTOMP_MAX_POOL_SOCKETS "250" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
-set(CAPSTOMP_MAX_POOL_COUNT "256" CACHE STRING "max of sockets pools")
+set(CAPSTOMP_MAX_POOL_COUNT "250" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
 option(CAPSTOMP_TRACE_LOG "addition trase to syslog" OFF)

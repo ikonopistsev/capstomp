@@ -81,6 +81,8 @@ public:
     // выполнить коммиты и вернуть соединение
     void commit();
 
+    void force_commit();
+
     // вернуть соединение
     void release();
 

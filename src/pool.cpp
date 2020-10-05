@@ -252,6 +252,47 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     return rc;
 }
 
+std::size_t pool::force_commit()
+{
+    std::size_t rc;
+
+    lock l(mutex_);
+
+    auto i = transaction_store_.begin();
+    auto e = transaction_store_.end();
+
+    while (i != e)
+    {
+        if (i->ready())
+        {
+            auto &conn = *i->connection();
+            conn.force_commit();
+            conn.release();
+            i = transaction_store_.erase(i);
+            ++rc;
+        }
+        else
+        {
+            capst_journal.cout([&]{
+                std::string text;
+                text.reserve(64);
+                text += "pool: "sv;
+                text += name_;
+                text += " force_commit transaction:"sv;
+                text += i->id();
+                text += " - not ready, "sv;
+                text += " state: "sv;
+                text += std::to_string(i->connection()->state());
+                return text;
+            });
+
+            ++i;
+        }
+    }
+
+    return rc;
+}
+
 
 void pool::release(connection_id_type connection_id)
 {
