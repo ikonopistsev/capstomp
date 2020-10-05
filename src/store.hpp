@@ -29,7 +29,7 @@ public:
 
     void erase(const std::string& name);
 
-    void commit(const std::string& name);
+    std::size_t commit(const std::string& name);
 
     void clear();
 

@@ -254,21 +254,23 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
 
 std::size_t pool::force_commit()
 {
-    std::size_t rc;
+    std::size_t rc = 0;
 
     lock l(mutex_);
 
     auto i = transaction_store_.begin();
-    auto e = transaction_store_.end();
-
-    while (i != e)
+    while (i != transaction_store_.end())
     {
         if (i->ready())
         {
             auto &conn = *i->connection();
             conn.force_commit();
-            conn.release();
+            // возможно это уничтожит этот объект
+            // дальше им пользоваться уже нельзя
+            release_connection(i->connection());
+
             i = transaction_store_.erase(i);
+
             ++rc;
         }
         else
@@ -293,12 +295,9 @@ std::size_t pool::force_commit()
     return rc;
 }
 
-
-void pool::release(connection_id_type connection_id)
+void pool::release_connection(connection_id_type connection_id)
 {
     auto pool_sockets = conf::pool_sockets();
-
-    lock l(mutex_);
 
     if (connection_id->good() && (ready_.size() < pool_sockets))
     {
@@ -354,6 +353,13 @@ void pool::release(connection_id_type connection_id)
 
         active_.erase(connection_id);
     }
+}
+
+void pool::release(connection_id_type connection_id)
+{
+    lock l(mutex_);
+
+    release_connection(connection_id);
 }
 
 std::string pool::json()

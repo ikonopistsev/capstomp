@@ -128,7 +128,7 @@ void store::erase(const std::string& name)
     store_.erase(f);
 }
 
-void store::commit(const std::string& name)
+std::size_t store::commit(const std::string& name)
 {
     lock l(mutex_);
 
@@ -144,6 +144,8 @@ void store::commit(const std::string& name)
         text += std::to_string(count);
         return text;
     });
+
+    return count;
 }
 
 void store::clear()
@@ -175,7 +177,9 @@ extern "C" my_bool capstomp_store_commit_init(UDF_INIT* initid,
         }
 
         auto& store = capst::store::inst();
-        store.commit(std::string(args->args[0], args->lengths[0]));
+        initid->ptr =
+            reinterpret_cast<char*>(static_cast<std::intptr_t>(
+                store.commit(std::string(args->args[0], args->lengths[0]))));
 
         initid->maybe_null = 0;
         initid->const_item = 0;
@@ -323,10 +327,19 @@ extern "C" long long capstomp_store_erase(UDF_INIT*,
 extern "C" void capstomp_store_erase_deinit(UDF_INIT*)
 {   }
 
-extern "C" long long capstomp_commit_erase(UDF_INIT*,
-    UDF_ARGS*, char*, char*)
+extern "C" long long capstomp_store_commit(UDF_INIT* initid,
+    UDF_ARGS*, char* is_null, char*)
 {
-    return static_cast<long long>(1);
+    *is_null = 0;
+
+    auto ptr = initid->ptr;
+    if (initid->ptr)
+    {
+        return static_cast<long long>(
+                reinterpret_cast<std::intptr_t>(ptr));
+    }
+
+    return 0;
 }
 
 extern "C" void capstomp_store_commit_deinit(UDF_INIT*)

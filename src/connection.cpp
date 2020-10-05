@@ -349,7 +349,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
 
     auto rc = transaction_store.size();
 
-    if (rc)
+    if (rc > 1)
     {
         capst_journal.cout([&]{
             std::string text;
@@ -358,7 +358,7 @@ std::size_t connection::commit(transaction_store_type transaction_store)
             text += transaction_id_;
             text += " socket="sv;
             text += std::to_string(socket_.fd());
-            text += "commit multiple transactions:"sv;
+            text += " commit multiple transactions:"sv;
             text += std::to_string(rc);
             return text;
         });
@@ -437,12 +437,26 @@ void connection::commit()
 {
     if (conf_.transaction())
     {
-        if (commit(pool_.get_uncommited(transaction_)) > 0)
+        auto count = commit(pool_.get_uncommited(transaction_));
+        if (count > 0)
         {
             // если что-то коммитили
             // то релизим и себя
             // возможно это уничтожит этот объект
             // дальше им пользоваться уже нельзя
+
+            if (count > 1)
+            {
+                capst_journal.cout([&]{
+                    std::string text;
+                    text.reserve(64);
+                    text += "connection: transaction:"sv;
+                    text += transaction_id_;
+                    text += " release end"sv;
+                    return text;
+                });
+            }
+
             release();
         }
         else
@@ -454,6 +468,14 @@ void connection::commit()
 
 void connection::force_commit()
 {
+    capst_journal.cerr([&]{
+        std::string text;
+        text.reserve(64);
+        text += "force commit transaction:"sv;
+        text += transaction_id_;
+        return text;
+    });
+
     commit_transaction(*transaction_, true);
 }
 

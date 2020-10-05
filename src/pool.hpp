@@ -35,6 +35,8 @@ private:
 
     void destroy();
 
+    void release_connection(connection_id_type connection_id);
+
 public:
     pool();
 
