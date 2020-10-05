@@ -192,8 +192,8 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
             text += " transaction:"sv;
             text += i->id();
             text += " deffered commit: "sv;
-            text += std::distance(b, i);
-            for (auto d = b; d != b; ++d)
+            text += std::to_string(std::distance(b, i));
+            for (auto d = b; d != i; ++d)
             {
                 text += ' ';
                 text += "transaction:"sv;
