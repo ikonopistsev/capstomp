@@ -63,16 +63,13 @@ public:
 
     void close() noexcept;
 
-    void init() noexcept;
+    void init(const connection_settings& conf) noexcept;
 
-    // lock and connect
     void connect(const uri& u);
 
     std::size_t send_content(stompconn::send frame);
 
-    void set(const connection_settings& conf);
-
-    // задание указателя на хранилище коннектов
+    // задание указателя соединение в хранилище подключений
     void set(connection_id_type self) noexcept;
 
     // задание указателя на выполняемую транзакцию
@@ -81,6 +78,7 @@ public:
     // выполнить коммиты и вернуть соединение
     void commit();
 
+    // выполнить комиты без проверки последовательности
     void force_commit();
 
     // вернуть соединение
@@ -119,6 +117,11 @@ public:
     std::string_view transaction_id() const noexcept
     {
         return transaction_id_;
+    }
+
+    bool with_transaction() const noexcept
+    {
+        return !transaction_id_.empty();
     }
 
     std::string_view error() const noexcept

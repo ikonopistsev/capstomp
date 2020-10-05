@@ -76,10 +76,11 @@ void connection::close() noexcept
     error_.clear();
 }
 
-void connection::init() noexcept
+void connection::init(const connection_settings& conf) noexcept
 {
     transaction_id_.clear();
     error_.clear();
+    conf_ = conf;
 }
 
 int socket_poll(btpro::socket socket, short int events, int timeout)
@@ -201,11 +202,6 @@ bool connection::connected()
     return true;
 }
 
-void connection::set(const connection_settings& conf)
-{
-    conf_ = conf;
-}
-
 void connection::set(connection_id_type self) noexcept
 {
     self_ = self;
@@ -213,6 +209,18 @@ void connection::set(connection_id_type self) noexcept
 
 void connection::set(transaction_id_type id) noexcept
 {
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.trace([&, id]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: socket="sv;
+        text += std::to_string(socket_.fd());
+        text += " set deferred transaction:"sv;
+        text += id->id();
+        return text;
+    });
+#endif
+
     transaction_ = id;
     transaction_id_ = id->id();
 }
@@ -265,6 +273,10 @@ void connection::begin()
     if (!conf_.transaction())
         return;
 
+    // создаем транзакцию
+    set(pool_.create_transaction(self_));
+
+    // начинаем транзакцию
     send(stompconn::begin(transaction_id_), is_receipt());
     read();
 }
@@ -438,7 +450,7 @@ void connection::commit()
     if (conf_.transaction())
     {
         auto count = commit(pool_.get_uncommited(transaction_));
-        if (count > 0)
+        if (count)
         {
             // если что-то коммитили
             // то релизим и себя

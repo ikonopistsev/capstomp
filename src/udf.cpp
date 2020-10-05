@@ -111,8 +111,12 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
 
     if (conn)
     {
+        // закроем сокет, чтобы пометить коннект как не удачный
         conn->close();
-        conn->release();
+
+        // коммитим все зависящие от нас транзакции
+        // и возвращаем соединение в пулл
+        conn->commit();
     }
 
     return 1;
@@ -254,6 +258,7 @@ extern "C" void capstomp_deinit(UDF_INIT* initid)
     try
     {
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+
         conn->set_state(7);
         // возможно, это уничтожит этот объект соединения
         conn->commit();

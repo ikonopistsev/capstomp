@@ -54,6 +54,8 @@ public:
 
     void release(connection_id_type connection_id);
 
+    transaction_id_type create_transaction(connection_id_type connection_id);
+
     // подтверждаем свою операцию и возвращаем список коммитов
     transaction_store_type get_uncommited(transaction_id_type transaction_id);
 

@@ -125,15 +125,19 @@ connection& pool::get(const settings& conf)
     conn.set(connection_id);
 
     // сбрасываем параметры
-    conn.init();
     // передаем конфиг
-    conn.set(conf);
+    conn.init(conf);
 
-    if (conf.transaction())
+    return conn;
+}
+
+void pool::release_connection(connection_id_type connection_id)
+{
+    auto pool_sockets = conf::pool_sockets();
+
+    if (connection_id->good() && (ready_.size() < pool_sockets))
     {
-        // создаем транзакцию
-        auto transaction_id = transaction_store_.emplace(
-            transaction_store_.end(), create_transaction_id(), connection_id);
+        connection_id->set_state(11);
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
@@ -141,16 +145,66 @@ connection& pool::get(const settings& conf)
             text.reserve(64);
             text += "pool: "sv;
             text += name_;
-            text += " set connection deferred transaction:"sv;
-            text += transaction_id->id();
+            text += " ready: "sv;
+            text += std::to_string(ready_.size());
+            text += " active: "sv;
+            text += std::to_string(active_.size());
+            text += " store connection"sv;
+            auto id = connection_id->transaction_id();
+            if (!id.empty())
+            {
+                text += ": transaction:"sv;
+                text += connection_id->transaction_id();
+            }
             return text;
         });
 #endif
-        // сохраняем транзакцию в соединении
-        conn.set(transaction_id);
-    }
 
-    return conn;
+        // перемещаем соединенеи в список готовых к работе
+        ready_.splice(ready_.begin(), active_, connection_id);
+        auto& conn = ready_.front();
+        conn.set(ready_.begin());
+    }
+    else
+    {
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            text += "pool: "sv;
+            text += name_;
+            text += " ready: "sv;
+            text += std::to_string(ready_.size());
+            text += " active: "sv;
+            text += std::to_string(active_.size());
+            text += " erase connection"sv;
+            auto id = connection_id->transaction_id();
+            if (!id.empty())
+            {
+                text += ": transaction:"sv;
+                text += connection_id->transaction_id();
+            }
+            return text;
+        });
+#endif
+
+        active_.erase(connection_id);
+    }
+}
+
+void pool::release(connection_id_type connection_id)
+{
+    lock l(mutex_);
+
+    release_connection(connection_id);
+}
+
+pool::transaction_id_type pool::create_transaction(connection_id_type connection_id)
+{
+    lock l(mutex_);
+    // создаем транзакцию
+    return transaction_store_.emplace(
+        transaction_store_.end(), create_transaction_id(), connection_id);
 }
 
 // подтверждаем свою операцию и возвращаем список коммитов
@@ -293,73 +347,6 @@ std::size_t pool::force_commit()
     }
 
     return rc;
-}
-
-void pool::release_connection(connection_id_type connection_id)
-{
-    auto pool_sockets = conf::pool_sockets();
-
-    if (connection_id->good() && (ready_.size() < pool_sockets))
-    {
-        connection_id->set_state(11);
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            text += "pool: "sv;
-            text += name_;
-            text += " ready: "sv;
-            text += std::to_string(ready_.size());
-            text += " active: "sv;
-            text += std::to_string(active_.size());
-            text += " store connection"sv;
-            auto id = connection_id->transaction_id();
-            if (!id.empty())
-            {
-                text += ": transaction:"sv;
-                text += connection_id->transaction_id();
-            }
-            return text;
-        });
-#endif
-
-        // перемещаем соединенеи в список готовых к работе
-        ready_.splice(ready_.begin(), active_, connection_id);
-        auto& conn = ready_.front();
-        conn.set(ready_.begin());
-    }
-    else
-    {
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            text += "pool: "sv;
-            text += name_;
-            text += " ready: "sv;
-            text += std::to_string(ready_.size());
-            text += " active: "sv;
-            text += std::to_string(active_.size());
-            text += " erase connection"sv;
-            auto id = connection_id->transaction_id();
-            if (!id.empty())
-            {
-                text += ": transaction:"sv;
-                text += connection_id->transaction_id();
-            }
-            return text;
-        });
-#endif
-
-        active_.erase(connection_id);
-    }
-}
-
-void pool::release(connection_id_type connection_id)
-{
-    lock l(mutex_);
-
-    release_connection(connection_id);
 }
 
 std::string pool::json()
