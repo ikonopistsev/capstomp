@@ -98,8 +98,8 @@ connection& pool::get(const settings& conf)
             throw std::runtime_error("pool: max pool sockets=" +
                                      std::to_string(max_pool_sockets));
         }
-
-        capst_journal.cout([&]{
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
@@ -110,7 +110,7 @@ connection& pool::get(const settings& conf)
             text += std::to_string(max_pool_sockets);
             return text;
         });
-
+#endif // CAPSTOMP_TRACE_LOG
         active_.emplace_front(*this);
     }
 
@@ -184,18 +184,23 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     auto b = transaction_store_.begin();
     if (i != b)
     {
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
+        capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
             text += "pool: "sv;
             text += name_;
             text += " transaction:"sv;
             text += i->id();
-            text += " deffered commit"sv;
+            text += " deffered commit: "sv;
+            text += std::distance(b, i);
+            for (auto d = b; d != b; ++d)
+            {
+                text += ' ';
+                text += "transaction:"sv;
+                text += d->id();
+            }
             return text;
         });
-#endif
 
         // если наша транзакция не первая в списке
         // просто говорим что мы законичли работу
@@ -330,18 +335,21 @@ std::string pool::json_arr(list_type& list)
 {
     std::string rc;
     std::string tmp;
-    tmp.reserve(64);
+    tmp.reserve(2048);
     rc += '[';
     for (auto& c: list)
     {
         if (!tmp.empty())
             tmp += ',';
 
-        tmp += '[';
+        tmp += '{';
+        tmp += "\"socket\":"sv;
         tmp += std::to_string(c.socket().fd());
-        tmp += ',';
+        tmp += ",\"state\":"sv;
         tmp += std::to_string(c.state());
-        tmp += ']';
+        tmp += ",\"total_count\":"sv;
+        tmp += std::to_string(c.total_count());
+        tmp += '}';
     }
     rc += tmp;
     rc += ']';

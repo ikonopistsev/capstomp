@@ -155,7 +155,8 @@ void connection::connect(const uri& u)
         // сокет создается неблокируемым
         socket.create(addr.family(), btpro::sock_stream);
 
-        capst_journal.cout([&]{
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
             text += "connection: connect to "sv;
@@ -164,6 +165,7 @@ void connection::connect(const uri& u)
             text += std::to_string(socket.fd());
             return text;
         });
+#endif // CAPSTOMP_TRACE_LOG
 
         connect_sync(socket, addr, static_cast<int>(conf::timeout()));
 
@@ -224,7 +226,8 @@ void connection::logon(const uri& u)
     if (path.empty())
         path = "/"sv;
 
-    capst_journal.cout([&]{
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
         text += "logon user="sv;
@@ -242,6 +245,7 @@ void connection::logon(const uri& u)
         }
         return text;
     });
+#endif // CAPSTOMP_TRACE_LOG
 
     send(stompconn::logon(path, u.user(), u.passcode()));
     read();
@@ -254,6 +258,7 @@ void connection::logon(const uri& u)
 void connection::begin()
 {
     set_state(4);
+
     ++request_count_;
 
     // если транзакций нет - выходим
@@ -325,8 +330,7 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
     if (connection_id != self_)
     {
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
+        capst_journal.cout([&]{
             std::string text;
             text.reserve(64);
             text += "connection: transaction:"sv;
@@ -334,7 +338,7 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
             text += " release deffered"sv;
             return text;
         });
-#endif
+
         pool_.release(connection_id);
     }
 }
@@ -342,7 +346,23 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 std::size_t connection::commit(transaction_store_type transaction_store)
 {
     set_state(8);
+
     auto rc = transaction_store.size();
+
+    if (rc)
+    {
+        capst_journal.cout([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: "sv;
+            text += transaction_id_;
+            text += " socket="sv;
+            text += std::to_string(socket_.fd());
+            text += "commit multiple transactions:"sv;
+            text += std::to_string(rc);
+            return text;
+        });
+    }
 
     // если транзакция одна то используем флаг подтверждений из конфига
     // если несколько то подтверждаем все
@@ -397,7 +417,7 @@ bool connection::read_stomp()
     char input[2048];
     auto rc = ::recv(socket_.fd(), input, sizeof(input), 0);
     if (btpro::code::fail == rc)
-        throw std::runtime_error("stomp recv");
+        throw std::system_error(btpro::net::error_code(), "recv");
 
     // парсим если чтото вычитали
     if (rc)
@@ -415,15 +435,21 @@ bool connection::read_stomp()
 
 void connection::commit()
 {
-    if (!conf_.transaction() ||
-        commit(pool_.get_uncommited(transaction_)) > 0)
+    if (conf_.transaction())
     {
-        // если что-то коммитили
-        // то релизим и себя
-        // возможно это уничтожит этот объект
-        // дальше им пользоваться уже нельзя
-        release();
+        if (commit(pool_.get_uncommited(transaction_)) > 0)
+        {
+            // если что-то коммитили
+            // то релизим и себя
+            // возможно это уничтожит этот объект
+            // дальше им пользоваться уже нельзя
+            release();
+        }
+        else
+            set_state(12);
     }
+    else
+        release();
 }
 
 void connection::release()
@@ -534,6 +560,13 @@ std::size_t connection::send_content(stompconn::send frame)
     if (conf_.timestamp())
         frame.push(stomptalk::header::time_since_epoch());
 
+    if (conf_.persistent())
+        frame.push(stomptalk::header::persistent_on());
+
+    auto delivery_mode = conf_.delivery_mode();
+    if (delivery_mode)
+        frame.push(stomptalk::header::delivery_mode(delivery_mode));
+
     auto receipt = is_receipt();
     // используется ли транзакция
     if (!transaction_id_.empty())
@@ -586,6 +619,9 @@ std::size_t connection::send(btpro::buffer data)
             throw std::runtime_error("send timeout");
     }
     while (!data.empty());
+
+    // число отправок
+    ++total_count_;
 
     return rc;
 }

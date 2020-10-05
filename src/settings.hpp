@@ -15,6 +15,8 @@ protected:
 
     // use transaction
     bool transaction_{ true };
+    bool persistent_{ false };
+    std::size_t delivery_mode_{ 0u };
 
     std::string pool_{};
 
@@ -44,6 +46,10 @@ public:
     connection_settings(const settings& other);
 
     bool timestamp() const noexcept;
+
+    bool persistent() const noexcept;
+
+    std::size_t delivery_mode() const noexcept;
 };
 
 } // namespace capst

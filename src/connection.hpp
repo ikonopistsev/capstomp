@@ -51,6 +51,7 @@ private:
     btpro::socket socket_{};
     stompconn::stomplay stomplay_{};
 
+    std::size_t total_count_{};
     std::size_t request_count_{};
     std::atomic<std::size_t> state_{};
 
@@ -99,6 +100,11 @@ public:
     }
 
     std::size_t state() const noexcept
+    {
+        return state_;
+    }
+
+    std::size_t total_count() const noexcept
     {
         return state_;
     }
