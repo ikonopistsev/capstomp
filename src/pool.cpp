@@ -352,7 +352,6 @@ std::size_t pool::force_commit()
 std::string pool::json()
 {
     std::string rc;
-    rc.reserve(64);
 
     lock l(mutex_);
 

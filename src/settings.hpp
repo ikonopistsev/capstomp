@@ -9,13 +9,12 @@ class settings
 protected:
     // wait rabbitmq receipts
     bool receipt_{ false };
-
     // add timestamps to headers
     bool timestamp_{ false };
 
+    bool persistent_{ false };
     // use transaction
     bool transaction_{ false };
-    bool persistent_{ false };
 
     void parse(std::string_view query);
 
@@ -26,11 +25,12 @@ public:
 
     bool receipt() const noexcept;
 
-    bool transaction() const noexcept;
-
     bool timestamp() const noexcept;
 
     bool persistent() const noexcept;
+
+    bool transaction() const noexcept;
+
 };
 
 } // namespace capst
