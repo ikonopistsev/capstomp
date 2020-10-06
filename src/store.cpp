@@ -8,13 +8,13 @@ using namespace std::literals;
 
 namespace capst {
 
-std::string endpoint(const uri& uri, const std::string& fragment)
+std::string endpoint(const uri& uri)
 {
     // смена пароля приведет к формированию нового пула
     auto u = uri.user();
     auto a = uri.addr();
     auto p = uri.path();
-    auto f = fragment.empty() ? uri.fragment() : fragment;
+    auto f = uri.fragment();
 
     std::string t;
     t.reserve(u.size() + a.size() + p.size() + f.size() + 2);
@@ -28,9 +28,9 @@ std::string endpoint(const uri& uri, const std::string& fragment)
     return t;
 }
 
-pool& store::select_pool(const uri& u, const std::string& forced_pool)
+pool& store::select_pool(const uri& u)
 {
-    auto name = endpoint(u, forced_pool);
+    auto name = endpoint(u);
     auto pool_max = conf::max_pool_count();
 
     lock l(mutex_);
@@ -73,14 +73,11 @@ pool& store::select_pool(const uri& u, const std::string& forced_pool)
 
 connection& store::get(const uri& u)
 {
-    // парсим настройки
-    auto conf = settings::create(u);
-
     // выбираем пулл
-    auto& pool = select_pool(u, conf.pool());
+    auto& pool = select_pool(u);
 
     // выбираем подключение
-    return pool.get(conf);
+    return pool.get(settings::create(u));
 }
 
 std::string store::json()

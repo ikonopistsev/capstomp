@@ -31,7 +31,7 @@ public:
 private:
     pool& pool_;
     // настройки коннекта
-    connection_settings conf_;
+    settings conf_;
     // указатель на позицию в пуле коннектов
     connection_id_type self_{};
 
@@ -63,7 +63,7 @@ public:
 
     void close() noexcept;
 
-    void init(const connection_settings& conf) noexcept;
+    void init(const settings& conf) noexcept;
 
     void connect(const uri& u);
 

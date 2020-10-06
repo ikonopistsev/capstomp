@@ -19,7 +19,7 @@ class store
 
     store() = default;
 
-    pool& select_pool(const uri& u, const std::string& forced_pool);
+    pool& select_pool(const uri& u);
 
 public:
 

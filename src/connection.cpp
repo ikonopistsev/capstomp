@@ -76,7 +76,7 @@ void connection::close() noexcept
     error_.clear();
 }
 
-void connection::init(const connection_settings& conf) noexcept
+void connection::init(const settings& conf) noexcept
 {
     transaction_id_.clear();
     error_.clear();

@@ -26,9 +26,8 @@ void settings::parse(std::string_view query)
         {
             auto with_receipt = "receipt"sv;
             auto with_timestamp = "timestamp"sv;
-            auto with_transaction = "transaction"sv;
-            auto with_pool = "pool"sv;
             auto with_persistent = "persistent"sv;
+            auto with_transaction = "transaction"sv;
             for (auto h = hdr.tqh_first; h; h = h->next.tqe_next)
             {
                 auto key = h->key;
@@ -41,15 +40,11 @@ void settings::parse(std::string_view query)
                     }
                     else if (with_timestamp == key)
                     {
-                        connection_timestamp_ = read_bool(val);
+                        timestamp_ = read_bool(val);
                     }
                     else if (with_transaction == key)
                     {
                         transaction_ = read_bool(val);
-                    }
-                    else if (with_pool == key)
-                    {
-                        pool_ = val;
                     }
                     else if (with_persistent == key)
                     {
@@ -69,18 +64,15 @@ settings settings::create(const uri& u)
     return s;
 }
 
-connection_settings::connection_settings(const settings& other)
-    : settings(other)
-{   }
 
 bool settings::receipt() const noexcept
 {
     return receipt_;
 }
 
-bool connection_settings::timestamp() const noexcept
+bool settings::timestamp() const noexcept
 {
-    return connection_timestamp_;
+    return timestamp_;
 }
 
 bool settings::transaction() const noexcept
@@ -88,13 +80,9 @@ bool settings::transaction() const noexcept
     return transaction_;
 }
 
-bool connection_settings::persistent() const noexcept
+bool settings::persistent() const noexcept
 {
     return persistent_;
 }
 
-std::size_t connection_settings::delivery_mode() const noexcept
-{
-    return delivery_mode_;
-}
 
