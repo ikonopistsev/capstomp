@@ -315,7 +315,6 @@ extern "C" void capstomp_status_deinit(UDF_INIT* initid)
     delete[] initid->ptr;
 }
 
-
 // empty func
 
 extern "C" long long capstomp_store_erase(UDF_INIT*,

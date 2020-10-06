@@ -29,7 +29,6 @@ void settings::parse(std::string_view query)
             auto with_transaction = "transaction"sv;
             auto with_pool = "pool"sv;
             auto with_persistent = "persistent"sv;
-            auto with_delivery_mode = "delivery_mode"sv;
             for (auto h = hdr.tqh_first; h; h = h->next.tqe_next)
             {
                 auto key = h->key;
@@ -55,10 +54,6 @@ void settings::parse(std::string_view query)
                     else if (with_persistent == key)
                     {
                         persistent_ = read_bool(val);
-                    }
-                    else if (with_delivery_mode == key)
-                    {
-                        delivery_mode_ = std::atol(val) == 2 ? 2u : 1u;
                     }
                 }
             }

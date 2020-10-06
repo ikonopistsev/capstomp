@@ -13,6 +13,7 @@ void conf::set_timeout(std::size_t value) noexcept
 {
     value = std::max(value, timeout_min);
     value = std::min(value, timeout_max);
+
     capst_journal.cout([value]{
         std::string text;
         text += "set timeout = "sv;
@@ -26,6 +27,7 @@ void conf::set_timeout(std::size_t value) noexcept
 void conf::set_max_pool_count(std::size_t value) noexcept
 {
     value = std::max(value, max_pool_count_min);
+
     capst_journal.cout([value]{
         std::string text;
         text += "set max pool count = "sv;
@@ -39,6 +41,7 @@ void conf::set_max_pool_count(std::size_t value) noexcept
 void conf::set_max_pool_sockets(std::size_t value) noexcept
 {
     value = std::max(value, max_pool_sockets_min);
+
     capst_journal.cout([value]{
         std::string text;
         text += "set max pool sockets = "sv;
@@ -52,6 +55,7 @@ void conf::set_max_pool_sockets(std::size_t value) noexcept
 void conf::set_pool_sockets(std::size_t value) noexcept
 {
     value = std::max(value, pool_sockets_min);
+
     capst_journal.cout([value]{
         std::string text;
         text += "set max pool pool_sockets = "sv;
@@ -65,6 +69,7 @@ void conf::set_pool_sockets(std::size_t value) noexcept
 void conf::set_request_limit(std::size_t value) noexcept
 {
     value = std::max(value, request_limit_min);
+
     capst_journal.cout([value]{
         std::string text;
         text += "set request limit = "sv;
@@ -73,18 +78,6 @@ void conf::set_request_limit(std::size_t value) noexcept
     });
 
     inst().request_limit_ = value;
-}
-
-void conf::set_enable(std::size_t value) noexcept
-{
-    capst_journal.cout([value]{
-        std::string text;
-        text += "set enable = "sv;
-        text += (value) ? "on"sv : "off"sv;
-        return text;
-    });
-
-    inst().enable_ = value;
 }
 
 void conf::set_verbose(std::size_t value) noexcept
@@ -357,57 +350,6 @@ extern "C" long long capstomp_request_limit(UDF_INIT* initid,
 }
 
 extern "C" void capstomp_request_limit_deinit(UDF_INIT*)
-{   }
-
-extern "C" my_bool capstomp_enable_init(UDF_INIT* initid,
-    UDF_ARGS* args, char* msg)
-{
-    auto arg_count = args->arg_count;
-    if ((arg_count == 1) && (args->arg_type[0] == INT_RESULT) && args->args[0])
-    {
-        auto enable = *reinterpret_cast<long long*>(args->args[0]);
-        capst::conf::set_enable(static_cast<std::size_t>(enable));
-
-
-        initid->ptr =
-            reinterpret_cast<char*>(static_cast<std::intptr_t>(
-                capst::conf::enable() ? 1 : 0));
-
-        return my_bool();
-    }
-    else if (arg_count == 0)
-    {
-        initid->ptr =
-            reinterpret_cast<char*>(static_cast<std::intptr_t>(
-                capst::conf::enable() ? 1 : 0));
-
-        return my_bool();
-    }
-
-    initid->ptr = nullptr;
-
-    strncpy(msg, "bad args, use capstomp_enable([enable_flag])",
-        MYSQL_ERRMSG_SIZE);
-
-    return 1;
-}
-
-extern "C" long long capstomp_enable(UDF_INIT* initid,
-    UDF_ARGS*, char* is_null, char*)
-{
-    *is_null = 0;
-
-    auto ptr = initid->ptr;
-    if (initid->ptr)
-    {
-        return static_cast<long long>(
-                reinterpret_cast<std::intptr_t>(ptr));
-    }
-
-    return 0;
-}
-
-extern "C" void capstomp_enable_deinit(UDF_INIT*)
 {   }
 
 extern "C" my_bool capstomp_verbose_init(UDF_INIT* initid,

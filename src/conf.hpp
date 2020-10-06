@@ -32,8 +32,6 @@ class conf
     // до принудительного получение квитанции от кролика
     volatile std::size_t request_limit_ = {request_limit_def};
 
-    volatile std::size_t enable_ = std::size_t{1u};
-
     static constexpr auto verbose_max = std::size_t{2u};
     volatile std::size_t verbose_ = std::size_t{0u};
 
@@ -68,11 +66,6 @@ public:
         return inst().request_limit_;
     }
 
-    static inline bool enable() noexcept
-    {
-        return inst().enable_ != 0u;
-    }
-
     static inline std::size_t verbose() noexcept
     {
         return inst().verbose_;
@@ -87,8 +80,6 @@ public:
     static void set_pool_sockets(std::size_t value) noexcept;
 
     static void set_request_limit(std::size_t value) noexcept;
-
-    static void set_enable(std::size_t value) noexcept;
 
     static void set_verbose(std::size_t value) noexcept;
 };

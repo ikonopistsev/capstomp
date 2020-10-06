@@ -606,10 +606,6 @@ std::size_t connection::send_content(stompconn::send frame)
     if (conf_.persistent())
         frame.push(stomptalk::header::persistent_on());
 
-    auto delivery_mode = conf_.delivery_mode();
-    if (delivery_mode)
-        frame.push(stomptalk::header::delivery_mode(delivery_mode));
-
     auto receipt = is_receipt();
     // используется ли транзакция
     if (!transaction_id_.empty())
