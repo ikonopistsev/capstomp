@@ -192,7 +192,7 @@ bool connection::connected()
 
     while (ready_read(0))
     {
-        if (!read_stomp())
+        if (!read_stomp("connected"sv))
         {
             close();
             return false;
@@ -256,7 +256,7 @@ void connection::logon(const uri& u)
 #endif // CAPSTOMP_TRACE_LOG
 
     send(stompconn::logon(path, u.user(), u.passcode()));
-    read();
+    read("logon"sv);
 
     // должна быть получена сессия
     if (stomplay_.session().empty())
@@ -278,7 +278,7 @@ void connection::begin()
 
     // начинаем транзакцию
     send(stompconn::begin(transaction_id_), is_receipt());
-    read();
+    read("begin"sv);
 }
 
 void connection::commit_transaction(transaction_type& transaction, bool receipt)
@@ -293,7 +293,7 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
         if (receipt)
         {
             connection_id->send(stompconn::commit(transaction_id), receipt);
-            connection_id->read();
+            connection_id->read("commit_transaction"sv);
         }
         else
         {
@@ -302,7 +302,7 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
                 // если коммитим несколько транзакций
                 // тогда ожидаем подтверждение каждой
                 connection_id->send(stompconn::commit(transaction_id), receipt);
-                connection_id->read();
+                connection_id->read("commit_transaction"sv);
             }
             else
             {
@@ -396,7 +396,7 @@ int connection::ready(short int events, int timeout)
     return socket_poll(socket_, events, timeout);
 }
 
-void connection::read()
+void connection::read(std::string_view marker)
 {
     while (!receipt_received_)
     {
@@ -404,18 +404,21 @@ void connection::read()
         // таймаут на разовое чтение
         if (ready_read(static_cast<int>(conf::timeout())))
         {
-            if (!read_stomp())
+            if (!read_stomp(marker))
             {
                 close();
 
                 if (!error_.empty())
-                    error_ = "disconnect"sv;
+                {
+                    error_ = "disconnect: "sv;
+                    error_ += marker;
+                }
 
                 receipt_received_ = true;
             }
         }
         else
-            throw std::runtime_error("timeout");
+            throw std::runtime_error(std::string("timeout: ") + marker.data());
     }
 
     // не должно быть ошибок
@@ -423,20 +426,21 @@ void connection::read()
         throw std::runtime_error(error_);
 }
 
-bool connection::read_stomp()
+bool connection::read_stomp(std::string_view marker)
 {
     // читаем
     char input[2048];
     auto rc = ::recv(socket_.fd(), input, sizeof(input), 0);
     if (btpro::code::fail == rc)
-        throw std::system_error(btpro::net::error_code(), "recv");
+        throw std::system_error(btpro::net::error_code(),
+                                std::string("recv: ") + marker.data());
 
     // парсим если чтото вычитали
     if (rc)
     {
         auto size = static_cast<std::size_t>(rc);
         if (size != stomplay_.parse(input, size))
-            throw std::runtime_error("stomp parse");
+            throw std::runtime_error(std::string("stomp parse: ") + marker.data());
 
         return true;
     }
@@ -618,7 +622,7 @@ std::size_t connection::send_content(stompconn::send frame)
     }
 
     auto rc = send(std::move(frame), receipt);
-    read();
+    read("send_content"sv);
     return rc;
 }
 
@@ -633,7 +637,7 @@ std::size_t connection::send(btpro::buffer data)
         // а мы ничего не ждем
         if (ev & POLLIN)
         {
-            if (!read_stomp())
+            if (!read_stomp("send"sv))
             {
                 close();
 

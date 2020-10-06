@@ -106,7 +106,7 @@ public:
 
     std::size_t total_count() const noexcept
     {
-        return state_;
+        return total_count_;
     }
 
     const std::string& destination() const noexcept
@@ -145,9 +145,9 @@ private:
 
     int ready(short int events, int timeout);
 
-    void read();
+    void read(std::string_view marker);
 
-    bool read_stomp();
+    bool read_stomp(std::string_view marker);
 
     std::size_t send(btpro::buffer buf);
 
