@@ -64,25 +64,3 @@ settings settings::create(const uri& u)
     return s;
 }
 
-
-bool settings::receipt() const noexcept
-{
-    return receipt_;
-}
-
-bool settings::timestamp() const noexcept
-{
-    return timestamp_;
-}
-
-bool settings::transaction() const noexcept
-{
-    return transaction_;
-}
-
-bool settings::persistent() const noexcept
-{
-    return persistent_;
-}
-
-

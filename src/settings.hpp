@@ -23,13 +23,25 @@ public:
 
     static settings create(const uri& u);
 
-    bool receipt() const noexcept;
+    bool receipt() const noexcept
+    {
+        return receipt_;
+    }
 
-    bool timestamp() const noexcept;
+    bool timestamp() const noexcept
+    {
+        return timestamp_;
+    }
 
-    bool persistent() const noexcept;
+    bool transaction() const noexcept
+    {
+        return transaction_;
+    }
 
-    bool transaction() const noexcept;
+    bool persistent() const noexcept
+    {
+        return persistent_;
+    }
 
 };
 

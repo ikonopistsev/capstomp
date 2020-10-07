@@ -33,7 +33,7 @@ class conf
     volatile std::size_t request_limit_ = {request_limit_def};
 
     static constexpr auto verbose_max = std::size_t{2u};
-    volatile std::size_t verbose_ = std::size_t{0u};
+    volatile std::size_t verbose_ = std::size_t{1u};
 
     conf() = default;
 
