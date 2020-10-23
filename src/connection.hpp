@@ -65,7 +65,7 @@ public:
 
     void init(const settings& conf) noexcept;
 
-    void connect(const uri& u);
+    void connect(const btpro::uri& u);
 
     std::size_t send_content(stompconn::send frame);
 
@@ -133,7 +133,7 @@ private:
 
     bool connected();
 
-    void logon(const uri& u);
+    void logon(const btpro::uri& u);
 
     void begin();
 

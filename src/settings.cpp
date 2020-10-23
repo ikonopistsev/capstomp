@@ -57,7 +57,7 @@ void settings::parse(std::string_view query)
     }
 }
 
-settings settings::create(const uri& u)
+settings settings::create(const btpro::uri& u)
 {
     settings s;
     s.parse(u.query());

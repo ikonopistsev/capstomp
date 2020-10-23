@@ -137,7 +137,7 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 }
 
 // подключаемся только на локалхост
-void connection::connect(const uri& u)
+void connection::connect(const btpro::uri& u)
 {
     set_state(2);
 
@@ -150,7 +150,8 @@ void connection::connect(const uri& u)
         close();
         // парсим адрес
         // и коннектимся на новый сокет
-        btpro::sock_addr addr(u.addr());
+        constexpr static auto stomp_def = 61613;
+        btpro::sock_addr addr(u.addr_port(stomp_def));
 
         btpro::socket socket;
         // сокет создается неблокируемым
@@ -161,7 +162,7 @@ void connection::connect(const uri& u)
             std::string text;
             text.reserve(64);
             text += "connection: connect to "sv;
-            text += u.addr();
+            text += u.addr_port(stomp_def);
             text += " socket="sv;
             text += std::to_string(socket.fd());
             return text;
@@ -225,7 +226,7 @@ void connection::set(transaction_id_type id) noexcept
     transaction_id_ = id->id();
 }
 
-void connection::logon(const uri& u)
+void connection::logon(const btpro::uri& u)
 {
     set_state(3);
 

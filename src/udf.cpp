@@ -1,7 +1,6 @@
 #include "store.hpp"
 #include "journal.hpp"
 #include "mysql.hpp"
-#include "uri.hpp"
 #include <thread>
 #include <sys/types.h>
 #include <unistd.h>
@@ -82,7 +81,7 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
         }
 
         // парсим урл
-        capst::uri uri(u);
+        btpro::uri uri(u);
         // получаем хранилище
         auto& store = capst::store::inst();
 

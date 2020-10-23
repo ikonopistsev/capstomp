@@ -19,11 +19,11 @@ class store
 
     store() = default;
 
-    pool& select_pool(const uri& u);
+    pool& select_pool(const btpro::uri& u);
 
 public:
 
-    connection& get(const uri& u);
+    connection& get(const btpro::uri& u);
 
     std::string json();
 

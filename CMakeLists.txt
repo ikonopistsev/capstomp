@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.1.9 LANGUAGES CXX)
+project(capstomp VERSION 2.2.0 LANGUAGES CXX)
 set(PROJECT_REVISION 7)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,7 +56,6 @@ set(sources
     src/store.cpp
     src/journal.cpp
     src/connection.cpp
-    src/controller.cpp
     src/settings.cpp
 )
 

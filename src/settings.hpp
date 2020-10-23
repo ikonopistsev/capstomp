@@ -1,6 +1,6 @@
 #pragma once
 
-#include "uri.hpp"
+#include "btpro/uri.hpp"
 
 namespace capst {
 
@@ -21,7 +21,7 @@ protected:
 public:
     settings() = default;
 
-    static settings create(const uri& u);
+    static settings create(const btpro::uri& u);
 
     bool receipt() const noexcept
     {

@@ -8,11 +8,11 @@ using namespace std::literals;
 
 namespace capst {
 
-std::string endpoint(const uri& uri)
+std::string endpoint(const btpro::uri& uri)
 {
     // смена пароля приведет к формированию нового пула
     auto u = uri.user();
-    auto a = uri.addr();
+    auto a = uri.addr_port(61613);
     auto p = uri.path();
     auto f = uri.fragment();
 
@@ -28,7 +28,7 @@ std::string endpoint(const uri& uri)
     return t;
 }
 
-pool& store::select_pool(const uri& u)
+pool& store::select_pool(const btpro::uri& u)
 {
     auto name = endpoint(u);
     auto pool_max = conf::max_pool_count();
@@ -71,7 +71,7 @@ pool& store::select_pool(const uri& u)
     return store_[name];
 }
 
-connection& store::get(const uri& u)
+connection& store::get(const btpro::uri& u)
 {
     // выбираем пулл
     auto& pool = select_pool(u);
