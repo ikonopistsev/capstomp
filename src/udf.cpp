@@ -171,7 +171,7 @@ bool capstomp_fill_headers(stompconn::send& frame,
             }
             case STRING_RESULT:
             case DECIMAL_RESULT: {
-                frame.push(header::make_ref(std::string_view(key_ptr, key_size),
+                frame.push(header::make(std::string_view(key_ptr, key_size),
                     std::string_view(val_ptr, val_size)));
                 break;
             }

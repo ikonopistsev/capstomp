@@ -153,8 +153,6 @@ private:
 
     std::size_t send(stompconn::logon frame);
 
-    std::string create_receipt_id(std::string_view transaction_id);
-
     bool is_receipt() noexcept;
 
 #ifdef CAPSTOMP_TRACE_LOG
@@ -169,21 +167,19 @@ private:
     {
         if (receipt)
         {
-            auto receipt_id = create_receipt_id(transaction_id_);
-            frame.push(stomptalk::header::receipt(receipt_id));
-
             // запускаем ожидание приема
             receipt_received_ = false;
 
-            stomplay_.add_handler(receipt_id,
-                                  [&, receipt_id](stompconn::packet packet){
+            // FIXME
+            // return handler id
+            stomplay_.add_handler(frame, [&](stompconn::packet packet){
                 // квитанция получена в любом случае
                 receipt_received_ = true;
 
                 if (!packet)
                     error_ = packet.payload().str();
 
-                trace_packet(packet, receipt_id);
+                //trace_packet(packet, receipt_id);
             });
         }
         else

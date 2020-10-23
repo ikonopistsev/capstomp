@@ -524,21 +524,6 @@ void connection::release()
     pool_.release(self_);
 }
 
-std::string connection::create_receipt_id(std::string_view transaction_id)
-{
-    std::string rc;
-    rc.reserve(64);
-    rc = std::to_string(++receipt_seq_);
-    rc += '#';
-    rc += std::to_string(socket_.fd());
-    if (!transaction_id.empty())
-    {
-        rc += 'T';
-        rc += transaction_id;
-    }
-    return rc;
-}
-
 bool connection::is_receipt() noexcept
 {
     auto receipt = conf_.receipt();
