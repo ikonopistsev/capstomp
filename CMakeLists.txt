@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(capstomp VERSION 2.2.1 LANGUAGES CXX)
-set(PROJECT_REVISION 7)
+project(capstomp VERSION 2.2.3 LANGUAGES CXX)
+set(PROJECT_REVISION 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -32,12 +32,16 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
-set(CAPSTOMP_POOL_SOCKETS "16" CACHE STRING "count of cached soktest in pool")
+# count of persistent tcp stomp connections per table
+# usualy it one per table (if triggers only)
+set(CAPSTOMP_POOL_SOCKETS "8" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
+# number of maximum connections per table (parallel runnig sql querys)
 set(CAPSTOMP_MAX_POOL_SOCKETS "250" CACHE STRING "max sockets in pool")
 add_definitions("-DCAPSTOMP_MAX_POOL_SOCKETS=${CAPSTOMP_MAX_POOL_SOCKETS}")
 
+# one pull used per table (maximum tables)
 set(CAPSTOMP_MAX_POOL_COUNT "250" CACHE STRING "max of sockets pools")
 add_definitions("-DCAPSTOMP_MAX_POOL_COUNT=${CAPSTOMP_MAX_POOL_COUNT}")
 
@@ -80,7 +84,7 @@ endif()
 # cpack
 install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
 
-set(CAPSTOMP_CPACK_TARGET "deb10" CACHE STRING "deb10 sufix")
+set(CAPSTOMP_CPACK_TARGET "10" CACHE STRING "sufix like deb10")
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to message broker")
@@ -106,7 +110,7 @@ IF(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 ENDIF(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
 
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}+${CAPSTOMP_CPACK_TARGET}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}+"deb"${CAPSTOMP_CPACK_TARGET}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})
 
 include(CPack)
 

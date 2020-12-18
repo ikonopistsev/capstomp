@@ -53,8 +53,9 @@ private:
 
     std::size_t total_count_{};
     std::size_t request_count_{};
+#ifdef CAPSTOMP_STATE_DEBUG
     std::atomic<std::size_t> state_{};
-
+#endif // CAPSTOMP_STATE_DEBUG
 public:
 
     connection(pool& pool);
@@ -94,6 +95,7 @@ public:
         return socket_;
     }
 
+#ifdef CAPSTOMP_STATE_DEBUG
     void set_state(std::size_t n)
     {
         state_ = n;
@@ -103,6 +105,7 @@ public:
     {
         return state_;
     }
+#endif // CAPSTOMP_STATE_DEBUG
 
     std::size_t total_count() const noexcept
     {

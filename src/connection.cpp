@@ -139,7 +139,9 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 // подключаемся только на локалхост
 void connection::connect(const btpro::uri& u)
 {
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(2);
+#endif
 
     std::hash<std::string_view> hf;
     auto passhash = hf(u.passcode());
@@ -228,7 +230,9 @@ void connection::set(transaction_id_type id) noexcept
 
 void connection::logon(const btpro::uri& u)
 {
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(3);
+#endif
 
     auto path = u.rpath();
 
@@ -266,7 +270,9 @@ void connection::logon(const btpro::uri& u)
 
 void connection::begin()
 {
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(4);
+#endif
 
     ++request_count_;
 
@@ -289,8 +295,9 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
     try
     {
+#ifdef CAPSTOMP_STATE_DEBUG
         connection_id->set_state(9);
-
+#endif
         if (receipt)
         {
             connection_id->send(stompconn::commit(transaction_id), receipt);
@@ -358,8 +365,9 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
 std::size_t connection::commit(transaction_store_type transaction_store)
 {
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(8);
-
+#endif
     auto rc = transaction_store.size();
 
     if (rc > 1)
@@ -476,8 +484,10 @@ void connection::commit()
 
             release();
         }
+#ifdef CAPSTOMP_STATE_DEBUG
         else
             set_state(12);
+#endif
     }
     else
         release();
@@ -512,8 +522,9 @@ void connection::release()
         return text;
     });
 #endif
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(10);
-
+#endif
     transaction_id_.clear();
 
     if (request_count_ >= conf::request_limit())
@@ -583,8 +594,9 @@ void connection::trace_packet(const stompconn::packet& packet,
 
 std::size_t connection::send_content(stompconn::send frame)
 {
+#ifdef CAPSTOMP_STATE_DEBUG
     set_state(6);
-
+#endif
     // используем ли таймстамп
     if (conf_.timestamp())
         frame.push(stomptalk::header::time_since_epoch());

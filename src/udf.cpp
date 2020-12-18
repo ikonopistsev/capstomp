@@ -192,7 +192,9 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
                    char* is_null, char* error)
 {
     auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
+#ifdef CAPSTOMP_STATE_DEBUG
     conn->set_state(5);
+#endif
     try
     {
         std::string destination(conn->destination());
@@ -257,8 +259,9 @@ extern "C" void capstomp_deinit(UDF_INIT* initid)
     try
     {
         auto conn = reinterpret_cast<capst::connection*>(initid->ptr);
-
+#ifdef CAPSTOMP_STATE_DEBUG
         conn->set_state(7);
+#endif
         // возможно, это уничтожит этот объект соединения
         conn->commit();
     }

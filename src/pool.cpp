@@ -117,7 +117,9 @@ connection& pool::get(const settings& conf)
     // получаем соединение
     auto& conn = active_.front();
 
+#ifdef CAPSTOMP_STATE_DEBUG
     conn.set_state(1);
+#endif
 
     // получаем указатель на соединение
     auto connection_id = active_.begin();
@@ -137,7 +139,9 @@ void pool::release_connection(connection_id_type connection_id)
 
     if (connection_id->good() && (ready_.size() < pool_sockets))
     {
+#ifdef CAPSTOMP_STATE_DEBUG
         connection_id->set_state(11);
+#endif
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
@@ -336,9 +340,11 @@ std::size_t pool::force_commit()
                 text += name_;
                 text += " force_commit transaction:"sv;
                 text += i->id();
-                text += " - not ready, "sv;
-                text += " state: "sv;
+                text += " - not ready";
+#ifdef CAPSTOMP_STATE_DEBUG
+                text += ", state: "sv;
                 text += std::to_string(i->connection()->state());
+#endif
                 return text;
             });
 
@@ -378,8 +384,10 @@ std::string pool::json_arr(list_type& list)
         tmp += '{';
         tmp += "\"socket\":"sv;
         tmp += std::to_string(c.socket().fd());
+#ifdef CAPSTOMP_STATE_DEBUG
         tmp += ",\"state\":"sv;
         tmp += std::to_string(c.state());
+#endif
         tmp += ",\"total_count\":"sv;
         tmp += std::to_string(c.total_count());
         tmp += '}';

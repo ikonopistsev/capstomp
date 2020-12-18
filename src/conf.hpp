@@ -27,7 +27,7 @@ class conf
     volatile std::size_t pool_sockets_ = {pool_sockets_def};
 
     static constexpr auto request_limit_min = std::size_t{4u};
-    static constexpr auto request_limit_def = std::size_t{1024u};
+    static constexpr auto request_limit_def = std::size_t{20480u};
     // число запросов, переданных через соединение,
     // до принудительного получение квитанции от кролика
     volatile std::size_t request_limit_ = {request_limit_def};
