@@ -16,42 +16,6 @@ To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html
 * [ActiveMQ Artemis](http://activemq.apache.org/components/artemis/) with native STOMP protocol support
 * [OR] [RabbitMQ with STOMP plugin](https://www.rabbitmq.com/stomp.html) for protocol support
 
-## Building
-
-Build with cmake and system libevent
-
-```
-git clone --recurse-submodules https://github.com/ikonopistsev/capstomp.git
-$ cd capstomp
-$ mkdir b && cd b
-$ cmake -DCMAKE_BUILD_TYPE=Release ..
-# ccmake .. (if needed)
-$ make
-```
-
-Build with static linked libevent
-
-```
-...
-$ cmake -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_STATIC_LIBEVENT=ON ..
-...
-```
-
-Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
-
-copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
-```
-CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_status RETURNS STRING SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_store_erase RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_read_timeout RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_enable RETURNS integer SONAME 'libcapstomp.so';
-```
-
 ## Example
 
 ### Hello, World!
@@ -88,4 +52,120 @@ Upon succes, this function returns a number containing the size of sending data.
 
 Same as `capstomp` but it add `content-type=application/json` header to each message.
 
+
+## Building
+
+Build with cmake and system libevent
+
+```
+git clone --recurse-submodules https://github.com/ikonopistsev/capstomp.git
+$ cd capstomp
+$ mkdir b && cd b
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
+# ccmake .. (if needed)
+$ make
+```
+
+### Build with static linked libevent
+
+```
+...
+$ cmake -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_STATIC_LIBEVENT=ON ..
+...
+```
+
+Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
+
+### Build on CentOS 7
+
+1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository
+
+```
+$ yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+$ yum update
+$ yum install cmake3
+```
+
+2. you need install new C++ compiller with c++17 support
+
+First, install the CentOS SCL release file. It is part of the CentOS extras repository and can be installed by running the following command:
+
+```
+$ sudo yum install centos-release-scl
+```
+
+In this example, we’ll install the Developer Toolset version 9. To do so type the following command on your CentOS 7 terminal:
+
+```
+$ sudo yum install devtoolset-9
+```
+
+To access GCC version 9, you need to launch a new shell instance using the Software Collection scl tool:
+
+```
+$ scl enable devtoolset-9 bash
+```
+
+Now if you check the GCC version, you’ll notice that GCC 9 is the default version in your current shell:
+
+```
+$ gcc --version
+
+gcc (GCC) 9.3.1 20200408 (Red Hat 9.3.1-2)
+```
+
+3. install libevent and mysql development files
+
+```
+$ yum install libevent-dev mariadb-devel
+```
+
+4. If you want make an rpm package you need to install rpm-build
+
+```
+$ yum install -y rpm-build
+```
+
+5. build
+
+in capstomp directory 
+
+```
+$ mkdir b && cd b
+```
+
+build static dependencies 
+
+```
+$ cmake3 -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_HAVE_MY_BOOL=ON -DCAPSTOMP_STATIC_STDCPP=ON -DCPACK_GENERATOR="RPM" ..
+```
+
+check the dependencies
+
+```
+$ ldd libcapstomp.so 
+        linux-vdso.so.1 =>  (0x00007fff209be000)
+        libevent-2.0.so.5 => /lib64/libevent-2.0.so.5 (0x00007f7da60b7000)
+        libm.so.6 => /lib64/libm.so.6 (0x00007f7da5db5000)
+        libc.so.6 => /lib64/libc.so.6 (0x00007f7da59e7000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f7da62ff000)
+        libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f7da57cb000)
+```
+
+### Installation 
+
+copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
+```
+CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_status RETURNS STRING SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_store_erase RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_read_timeout RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_enable RETURNS integer SONAME 'libcapstomp.so';
+```
+
 > Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
+
