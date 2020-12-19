@@ -152,6 +152,16 @@ $ ldd libcapstomp.so
         libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f7da57cb000)
 ```
 
+6. create rpm package
+
+just run cpack3
+
+```
+$ cpack3
+...
+CPack3: - package: /usr/src/capstomp/b/capstomp-2.2.3-1.el7.x86_64.rpm generated.
+```
+
 ### Installation 
 
 copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
