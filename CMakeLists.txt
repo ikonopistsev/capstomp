@@ -1,16 +1,27 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.7)
 
 project(capstomp VERSION 2.2.3 LANGUAGES CXX)
-set(PROJECT_REVISION 1)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(PROJECT_VERSION_TWEAK 1)
+
+macro(use_cxx17)
+  if (CMAKE_VERSION VERSION_LESS "3.8.2")
+    message(STATUS "capstomp enable c++17")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+  else ()
+    set (CMAKE_CXX_STANDARD 17)
+    set (CMAKE_CXX_STANDARD_REQUIRED ON)
+  endif ()
+endmacro(use_cxx17)
+
+use_cxx17()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     option(CAPSTOMP_CLANG_LIBCXX "use clang libcxx" OFF)
     if (CAPSTOMP_CLANG_LIBCXX)
-    add_compile_options("-nostdinc++")
-    include_directories("/usr/lib/llvm-11/include/c++/v1" "/usr/include/c++/v1")
+	add_compile_options("-stdlib=libc++")
     endif()
 endif()
 
@@ -74,57 +85,48 @@ else()
     target_link_libraries(capstomp PRIVATE event stomptalk stompconn)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    if (CAPSTOMP_CLANG_LIBCXX)
-        target_link_options(capstomp PRIVATE "-stdlib=libc++")
-    endif()
-endif()
-
 # cpack
-install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to message broker")
 set(CPACK_PACKAGE_CONTACT "admin@dev4.fun")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_STRIP_FILES TRUE)
+
+if(EXISTS "/etc/os-release")
+    # find os release name and version
+    file(STRINGS /etc/os-release OS_RELEASE_ID REGEX ^ID= )
+    string(REPLACE "ID=" "" OS_RELEASE_ID ${OS_RELEASE_ID})
+    string(REPLACE  "\"" "" OS_RELEASE_ID ${OS_RELEASE_ID}) #"
+
+    file(STRINGS /etc/os-release OS_RELEASE_VERSION_ID REGEX ^VERSION_ID=)
+    string(REPLACE "VERSION_ID=" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID})
+    string(REPLACE  "\"" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID}) #"
+    # read arch
+    EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
+
+    string(CONCAT CPACK_SYSTEM_NAME ${OS_RELEASE_ID} ${OS_RELEASE_VERSION_ID} "-" ${ARCHITECTURE})
+endif()
 
 #set(CPACK_GENERATOR "DEB")
 
-if (CPACK_GENERATOR STREQUAL "DEB")
+if (CPACK_GENERATOR STREQUAL "DEB")    
+    install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ikonopistsev")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_SECTION main)
-    set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_REVISION})
-
-    set(CAPSTOMP_CPACK_TARGET "10" CACHE STRING "sufix like deb10")
-
-    IF(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
-	FIND_PROGRAM(DPKG_CMD dpkg)
-	IF(NOT DPKG_CMD)
-    	    MESSAGE(STATUS "Can not find dpkg in your path, default to i386.")
-    	    SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE i386)
-	ENDIF(NOT DPKG_CMD)
-	EXECUTE_PROCESS(COMMAND "${DPKG_CMD}" --print-architecture
-        OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    ENDIF(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
-
-    set(CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME}_${PROJECT_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}+"deb"${CAPSTOMP_CPACK_TARGET}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})
+    set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
+    set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}")
+    set(CPACK_DEB_PACKAGE_COMPONENT ON)
 endif()
 
 if (CPACK_GENERATOR STREQUAL "RPM")
-    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib /usr/lib/mysql /usr/lib/mysql/plugin)
-    # условие для DEB и RPM
-    set(CUSTOM_RPM_SUFFIX ".el7")
-    #добавить зависимость от субд
-    set(CPACK_RPM_PACKAGE_REQUIRES mariadb-server)
-    # говорим чтобы он проверил зависимости
-    set(CPACK_RPM_PACKAGE_AUTOREQ ON)
-    # прописываем имя выходного файла
-    set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-${PROJECT_REVISION}${CUSTOM_RPM_SUFFIX}.${CMAKE_SYSTEM_PROCESSOR}")
+    install(TARGETS capstomp LIBRARY DESTINATION lib64/mysql/plugin)
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib64 /usr/lib64/mysql /usr/lib64/mysql/plugin)
+    set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
+    set(CPACK_RPM_PACKAGE_LICENSE "Apache-2.0")
+    set(CPACK_RPM_PACKAGE_URL "https://github.com/ikonopistsev/capstomp")
 endif()
 
 include(CPack)
-
-
 
