@@ -158,8 +158,67 @@ just run cpack3
 
 ```
 $ cpack3
-...
-CPack3: - package: /usr/src/capstomp/b/capstomp-2.2.3-1.el7.x86_64.rpm generated.
+```
+
+### Build on Debian 9
+For Debian 9 I use clang-11 compiller (oficial stable release) [https://apt.llvm.org/]
+
+1. Install repository key and apt https support
+
+```
+$ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+$ apt install apt-transport-https
+```
+
+2l Add repository path to /etc/apt/sources.list
+
+```
+# llvm 11 
+deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-11 main
+deb-src http://apt.llvm.org/stretch/ llvm-toolchain-stretch-11 main
+```
+
+3. Run update
+
+```
+$ apt update
+```
+
+4. Install dependencies
+
+```
+apt install default-libmysqlclient-dev libevent-dev
+```
+
+5. Insall utilities
+
+```
+apt install cmake cmake-curses-gui git wget build-essential
+```
+
+6. Install clang and libc++11
+
+```
+$ apt install clang-11 lldb-11 lld-11 libc++-11-dev libc++abi-11-dev
+```
+
+7. setup compiller
+
+```
+$ export CC=clang-11
+$ export CXX=clang++-11
+```
+
+8. build
+
+```
+cmake -DCAPSTOMP_CLANG_LIBCXX=ON -DCAPSTOMP_HAVE_MY_BOOL=ON -DCMAKE_BUILD_TYPE=Release -DCPACK_GENERATOR=DEB ..
+```
+
+9. create deb package
+
+```
+cpack
 ```
 
 ### Installation 
