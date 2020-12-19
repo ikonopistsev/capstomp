@@ -80,10 +80,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 endif()
 
-
 # cpack
 install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
-
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to message broker")
