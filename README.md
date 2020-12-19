@@ -161,7 +161,8 @@ $ cpack3
 ```
 
 ### Build on Debian 9
-For Debian 9 I use clang-11 compiller (oficial stable release) [https://apt.llvm.org/]
+
+For Debian 9 I use clang-11 compiller [oficial stable release](https://apt.llvm.org/)
 
 1. Install repository key and apt https support
 
@@ -233,7 +234,6 @@ CREATE FUNCTION capstomp_read_timeout RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_enable RETURNS integer SONAME 'libcapstomp.so';
 ```
 
 > Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
