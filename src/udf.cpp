@@ -25,6 +25,8 @@ struct version
 #define STR(x) STR_HELPER(x)
         constexpr static std::string_view capst_version =
             STR(CAPSTOMP_PLUGIN_VERSION);
+        constexpr static std::string_view capst_cxx_name =
+            STR(CAPSTOMP_CXX_NAME);
 #undef STR_HELPER
 #undef STR
 
@@ -32,6 +34,12 @@ struct version
             std::string text;
             text += 'v';
             text += capst_version;
+            if (!capst_cxx_name.empty())
+	    {
+        	text += " ("sv;
+        	text += capst_cxx_name;
+        	text += ")"sv;
+	    }
             text += ", stompconn v"sv;
             text += stompconn::version();
             text += ", stomptalk v"sv;
