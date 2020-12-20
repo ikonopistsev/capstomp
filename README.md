@@ -8,7 +8,7 @@ To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html
 
 ## Requirements
 
-* C++ compiler (tested with gcc and clang) and cmake build tool.
+* C++ compiler with C++17 support (tested with gcc and clang) and cmake build tool.
 * [MySQL](http://www.mysql.com/) or forks
 * [stomptalk](https://github.com/ikonopistsev/stomptalk) STOMP protocol parser library
 * [stompconn](https://github.com/ikonopistsev/stompconn) simple STOMP connector
@@ -33,7 +33,7 @@ mysql> SELECT capstomp_json('stomp://guest:guest@localhost:61613/123#/exchange/u
 
 ## API
 
-### `capstomp(uri, routing-key, json-data [, stomp-header...])`
+### `capstomp(uri, routing-key, json-data [, stomp-header-pairs...])`
 
 Sends a `json-data` to the given `destination` on the provided `uri`.
 
@@ -42,16 +42,15 @@ Sends a `json-data` to the given `destination` on the provided `uri`.
 * `uri` (string). "stomp://guest:guest@localhost/vhost#/stomp_destination/name" [STOMP destination](https://www.rabbitmq.com/stomp.html#d).
 * `routing-key` (string). routing key for exchanges, or empty '' [STOMP exchange destination](https://www.rabbitmq.com/stomp.html#d.ed).
 * `json-data` (string). The body of the message (typically json but it may any string).
-* `stomp-header` (mostly string). `round(unix_timestamp(now(4))*1000) as 'timestamp'` will add to STOMP header `timestamp=1599081164296`.
+* `stomp-header-pairs` (query pairs like key1=val1&key2=val2 etc). `CONCAT('my_timestamp=', round(unix_timestamp(now(4))*1000), '&some_id=', 42)` will add to STOMP headers `my_timestamp=1599081164296` and `some_id=42`, but you have to be careful with it.
 
 #### Returns
 
 Upon succes, this function returns a number containing the size of sending data.
 
-### `capstomp_json(uri, routing-key, json-data [, stomp-header...])`
+### `capstomp_json(uri, routing-key, json-data [, stomp-header-pairs...])`
 
 Same as `capstomp` but it add `content-type=application/json` header to each message.
-
 
 ## Building
 
@@ -78,7 +77,7 @@ Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
 
 ### Build on CentOS 7
 
-1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository
+1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository.
 
 ```
 $ yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -86,7 +85,7 @@ $ yum update
 $ yum install cmake3
 ```
 
-2. you need install new C++ compiller with c++17 support
+2. You need to install new C++ compiller with C++17 support.
 
 First, install the CentOS SCL release file. It is part of the CentOS extras repository and can be installed by running the following command:
 
@@ -114,19 +113,19 @@ $ gcc --version
 gcc (GCC) 9.3.1 20200408 (Red Hat 9.3.1-2)
 ```
 
-3. install libevent and mysql development files
+3. Install libevent and mysql development files.
 
 ```
-$ yum install libevent-dev mariadb-devel
+$ yum install libevent-devel mariadb-devel
 ```
 
-4. If you want make an rpm package you need to install rpm-build
+4. If you want to build rpm package you need to install rpm-build
 
 ```
 $ yum install -y rpm-build
 ```
 
-5. build
+5. Build.
 
 in capstomp directory 
 
@@ -134,7 +133,7 @@ in capstomp directory
 $ mkdir b && cd b
 ```
 
-build static dependencies 
+builing with static dependencies
 
 ```
 $ cmake3 -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_HAVE_MY_BOOL=ON -DCAPSTOMP_STATIC_STDCPP=ON -DCPACK_GENERATOR="RPM" ..
@@ -152,7 +151,7 @@ $ ldd libcapstomp.so
         libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f7da57cb000)
 ```
 
-6. create rpm package
+6. Create rpm package.
 
 just run cpack3
 
@@ -164,14 +163,14 @@ $ cpack3
 
 For Debian 9 I use clang-11 compiller [oficial stable release](https://apt.llvm.org/)
 
-1. Install repository key and apt https support
+1. Install repository key and apt https support.
 
 ```
 $ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 $ apt install apt-transport-https
 ```
 
-2l Add repository path to /etc/apt/sources.list
+2. Add repository path to /etc/apt/sources.list and update apt
 
 ```
 # llvm 11 
@@ -203,20 +202,20 @@ apt install cmake cmake-curses-gui git wget build-essential
 $ apt install clang-11 lldb-11 lld-11 libc++-11-dev libc++abi-11-dev
 ```
 
-7. setup compiller
+7. Setup compiller
 
 ```
 $ export CC=clang-11
 $ export CXX=clang++-11
 ```
 
-8. build
+8. Configure project
 
 ```
 cmake -DCAPSTOMP_CLANG_LIBCXX=ON -DCAPSTOMP_HAVE_MY_BOOL=ON -DCMAKE_BUILD_TYPE=Release -DCPACK_GENERATOR=DEB ..
 ```
 
-9. create deb package
+9. Create deb package
 
 ```
 cpack
@@ -225,6 +224,7 @@ cpack
 ### Installation 
 
 copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
+
 ```
 CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
@@ -234,6 +234,7 @@ CREATE FUNCTION capstomp_read_timeout RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
 CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_verbose RETURNS integer SONAME 'libcapstomp.so';
 ```
 
 > Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)

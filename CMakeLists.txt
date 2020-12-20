@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(capstomp VERSION 2.2.3 LANGUAGES CXX)
+project(capstomp VERSION 2.3.1 LANGUAGES CXX)
 
-set(PROJECT_VERSION_TWEAK 2)
+set(PROJECT_VERSION_TWEAK 1)
 
 macro(use_cxx17)
   if (CMAKE_VERSION VERSION_LESS "3.8.2")
@@ -91,30 +91,34 @@ endif()
 # cpack
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
+set(CAPSTOMP_HOME_PAGE "https://github.com/ikonopistsev/capstomp")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "mysql udf plugin for sending stomp message to message broker")
 set(CPACK_PACKAGE_CONTACT "admin@dev4.fun")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_STRIP_FILES TRUE)
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
-if(EXISTS "/etc/os-release")
-    # read arch
-    EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
-
+if (EXISTS "/etc/os-release")
     # find os release name and version
     file(STRINGS /etc/os-release OS_RELEASE_ID REGEX ^ID= )
-    string(REPLACE "ID=" "" OS_RELEASE_ID ${OS_RELEASE_ID})
-    string(REPLACE  "\"" "" OS_RELEASE_ID ${OS_RELEASE_ID}) #"
+    if (OS_RELEASE_ID)
+        string(REPLACE "ID=" "" OS_RELEASE_ID ${OS_RELEASE_ID})
+        string(REPLACE  "\"" "" OS_RELEASE_ID ${OS_RELEASE_ID}) #"
 
-    file(STRINGS /etc/os-release OS_RELEASE_VERSION_ID REGEX ^VERSION_ID=)
-    if (OS_RELEASE_VERSION_ID)
-        string(REPLACE "VERSION_ID=" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID})
-        string(REPLACE  "\"" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID}) #"
-        string(CONCAT CPACK_SYSTEM_NAME ${OS_RELEASE_ID} ${OS_RELEASE_VERSION_ID} "-" ${ARCHITECTURE})
+        file(STRINGS /etc/os-release OS_RELEASE_VERSION_ID REGEX ^VERSION_ID=)
+        if (OS_RELEASE_VERSION_ID)
+            string(REPLACE "VERSION_ID=" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID})
+            string(REPLACE  "\"" "" OS_RELEASE_VERSION_ID ${OS_RELEASE_VERSION_ID}) #"
+            string(CONCAT CPACK_SYSTEM_NAME ${OS_RELEASE_ID} ${OS_RELEASE_VERSION_ID})
+        else()
+            string(CONCAT CPACK_SYSTEM_NAME ${OS_RELEASE_ID})
+        endif()
+
+        if (CMAKE_SYSTEM_PROCESSOR)
+            string(CONCAT CPACK_SYSTEM_NAME ${CPACK_SYSTEM_NAME} "-" ${CMAKE_SYSTEM_PROCESSOR})
+        endif()
     endif()
-    string(CONCAT CPACK_SYSTEM_NAME ${OS_RELEASE_ID} ${OS_RELEASE_VERSION_ID} "-" ${ARCHITECTURE})
 endif()
-
-#set(CPACK_GENERATOR "DEB")
 
 if (CPACK_GENERATOR STREQUAL "DEB")    
     install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
@@ -122,6 +126,7 @@ if (CPACK_GENERATOR STREQUAL "DEB")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_SECTION main)
     set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
+    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${CAPSTOMP_HOME_PAGE})
 endif()
 
 if (CPACK_GENERATOR STREQUAL "RPM")
@@ -129,8 +134,14 @@ if (CPACK_GENERATOR STREQUAL "RPM")
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib64 /usr/lib64/mysql /usr/lib64/mysql/plugin)
     set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
     set(CPACK_RPM_PACKAGE_LICENSE "Apache-2.0")
-    set(CPACK_RPM_PACKAGE_URL "https://github.com/ikonopistsev/capstomp")
+    set(CPACK_RPM_PACKAGE_URL ${CAPSTOMP_HOME_PAGE})
 endif()
+
+if (CPACK_GENERATOR STREQUAL "TGZ")
+    install(TARGETS capstomp LIBRARY DESTINATION ./)
+endif()
+
+message(STATUS "SYSTEM_NAME=${CPACK_SYSTEM_NAME}")
 
 include(CPack)
 

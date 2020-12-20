@@ -3,7 +3,10 @@
 #include "mysql.hpp"
 #include <thread>
 #include <sys/types.h>
+
+#ifndef WIN32
 #include <unistd.h>
+#endif // WIN32
 
 #include "stompconn/version.hpp"
 #include "stomptalk/version.hpp"
@@ -35,19 +38,21 @@ struct version
             text += 'v';
             text += capst_version;
             if (!capst_cxx_name.empty())
-	    {
-        	text += " ("sv;
-        	text += capst_cxx_name;
-        	text += ")"sv;
-	    }
+            {
+                text += " ("sv;
+                text += capst_cxx_name;
+                text += ")"sv;
+            }
             text += ", stompconn v"sv;
             text += stompconn::version();
             text += ", stomptalk v"sv;
             text += stomptalk::version();
             text += ", libevent v"sv;
             text += btpro::queue::version();
+#ifndef WIN32
             text += ", mysqld pid="sv;
             text += std::to_string(getpid());
+#endif // WIN32
             return text;
         });
     }
@@ -129,6 +134,63 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
     return 1;
 }
 
+bool capstomp_fill_kv_header(stompconn::send& frame,
+                             const char *ptr, const char *end)
+{
+    bool custom_content_type = false;
+    constexpr static std::string_view eq = "="sv;
+
+    auto f = std::find_first_of(ptr, end, eq.begin(), eq.end());
+    if (ptr != f)
+    {
+        std::string_view key(ptr, std::distance(ptr, f++));
+        std::string_view val(f, std::distance(f, end));
+
+        using namespace stomptalk;
+        using stomptalk::header::detect;
+        using content_type = stomptalk::header::tag::content_type;
+
+        if (detect(content_type(), key))
+            custom_content_type = true;
+
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            text += "header+ "sv;
+            text += key;
+            text += ": "sv;
+            text += val;
+            return text;
+        });
+#endif
+
+        frame.push(header::make(key, val));
+    }
+
+    return custom_content_type;
+}
+
+bool capstomp_split_kv_header(stompconn::send& frame,
+                              const char *ptr, const char *end)
+{
+    bool custom_content_type = false;
+    constexpr static std::string_view a = "&"sv;
+
+    for (auto curr = ptr; curr != end && ptr != end; ptr = curr + 1)
+    {
+        curr = std::find_first_of(ptr, end, a.begin(), a.end());
+        if (ptr != curr)
+        {
+            auto rc = capstomp_fill_kv_header(frame, ptr, curr);
+            if (rc)
+                custom_content_type = true;
+        }
+    }
+
+    return custom_content_type;
+}
+
 //             0        1                2             3
 // "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
 // "capstomp(\"uri\", \"routing-key\", \"json-data\"[, param])"
@@ -137,11 +199,7 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
 bool capstomp_fill_headers(stompconn::send& frame,
                            UDF_ARGS* args, unsigned int from)
 {
-    using stomptalk::header::detect;
-    using content_type = stomptalk::header::tag::content_type;
-
-    bool has_content_type = false;
-
+    bool custom_content_type = false;
 #ifdef CAPSTOMP_TRACE_LOG
     if (from < args->arg_count) {
         capst_journal.trace([]{
@@ -151,44 +209,18 @@ bool capstomp_fill_headers(stompconn::send& frame,
 #endif
     for (unsigned int i = from; i < args->arg_count; ++i)
     {
-        auto key_ptr = args->attributes[i];
-        auto key_size = args->attribute_lengths[i];
         auto val_ptr = args->args[i];
         auto val_size = args->lengths[i];
-        if (key_ptr && key_size && val_ptr && val_size)
+        if (val_ptr && val_size)
         {
-            // проверяем есть ли кастомный content_type
-            std::string_view key(key_ptr, key_size);
-            if (detect(content_type(), key))
-                has_content_type = true;
-
-            using namespace stomptalk;
-
-            auto type = args->arg_type[i];
-            switch (type)
-            {
-            case REAL_RESULT: {
-                frame.push(header::make(std::string_view(key_ptr, key_size),
-                    std::to_string(*reinterpret_cast<double*>(val_ptr))));
-                break;
-            }
-            case INT_RESULT: {
-                frame.push(header::make(std::string_view(key_ptr, key_size),
-                    std::to_string(*reinterpret_cast<long long*>(val_ptr))));
-                break;
-            }
-            case STRING_RESULT:
-            case DECIMAL_RESULT: {
-                frame.push(header::make(std::string_view(key_ptr, key_size),
-                    std::string_view(val_ptr, val_size)));
-                break;
-            }
-            default:;
-            }
+            auto rc = capstomp_split_kv_header(frame,
+                val_ptr, val_ptr + val_size);
+            if (rc)
+                custom_content_type = true;
         }
     }
 
-    return has_content_type;
+    return custom_content_type;
 }
 
 //             0        1                2             3
