@@ -67,16 +67,17 @@ add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 
 add_subdirectory(stomptalk)
 
-# it for lib stompconn
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
-
-add_subdirectory(stompconn)
-
 if (CAPSTOMP_STATIC_LIBEVENT)
     set(EVENT__LIBRARY_TYPE "STATIC")
     add_subdirectory(libevent)
     include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
 endif()
+
+# it for lib stompconn
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
+
+# after libevent
+add_subdirectory(stompconn)
 
 set(sources
     src/udf.cpp
