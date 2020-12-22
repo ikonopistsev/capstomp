@@ -9,7 +9,7 @@ do
         CAPSTOMP_PATH="/usr/lib/$DB_TYPE/$PLUGIN_DIR/libcapstomp.so"
         if [ -L $CAPSTOMP_PATH ]; then
             rm -v $CAPSTOMP_PATH
-        exit 0
+        fi
     done
 done
 
