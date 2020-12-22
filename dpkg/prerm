@@ -2,27 +2,27 @@
 
 set -e
 
-CAPSTOMP_PATH = "/usr/lib64/mariadb/plugins/libcapstomp.so";
-if [ -L ${CAPSTOMP_PATH} ]; then
-    rm ${CAPSTOMP_PATH}
+CAPSTOMP_PATH="/usr/lib64/mariadb/plugins/libcapstomp.so"
+if [ -L $CAPSTOMP_PATH ]; then
+    rm $CAPSTOMP_PATH
     exit 0
 fi
 
-CAPSTOMP_PATH = "/usr/lib/mariadb/plugins/libcapstomp.so";
-if [ -L ${CAPSTOMP_PATH} ]; then
-    rm ${CAPSTOMP_PATH}
+CAPSTOMP_PATH="/usr/lib/mariadb/plugins/libcapstomp.so"
+if [ -L $CAPSTOMP_PATH ]; then
+    rm $CAPSTOMP_PATH
     exit 0
 fi
 
-CAPSTOMP_PATH = "/usr/lib64/mysql/plugins/libcapstomp.so";
-if [ -L ${CAPSTOMP_PATH} ]; then
-    rm ${CAPSTOMP_PATH}
+CAPSTOMP_PATH="/usr/lib64/mysql/plugins/libcapstomp.so"
+if [ -L $CAPSTOMP_PATH ]; then
+    rm $CAPSTOMP_PATH
     exit 0
 fi
 
-CAPSTOMP_PATH = "/usr/lib/mysql/plugins/libcapstomp.so";
-if [ -L ${CAPSTOMP_PATH} ]; then
-    rm ${CAPSTOMP_PATH}
+CAPSTOMP_PATH="/usr/lib/mysql/plugins/libcapstomp.so"
+if [ -L $CAPSTOMP_PATH ]; then
+    rm $CAPSTOMP_PATH
 fi
 
 exit 0
