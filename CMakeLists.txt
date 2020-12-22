@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(capstomp VERSION 2.3.1 LANGUAGES CXX)
+project(capstomp VERSION 2.3.2 LANGUAGES CXX)
 
 set(PROJECT_VERSION_TWEAK 1)
 
 macro(use_cxx17)
   if (CMAKE_VERSION VERSION_LESS "3.8.2")
-    message(STATUS "capstomp enable c++17")
+    message(STATUS "capstomp enable C++17")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
   else ()
     set (CMAKE_CXX_STANDARD 17)
@@ -14,32 +14,26 @@ macro(use_cxx17)
   endif ()
 endmacro(use_cxx17)
 
+# enable C++17 for cmake 3.7
 use_cxx17()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(CAPSTOMP_STATIC_LIBEVENT "static libevent" OFF)
+
+# unsing clang libc++ if needed
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    option(CAPSTOMP_CLANG_LIBCXX "use clang libcxx for capstomp" OFF)
+    if (CAPSTOMP_CLANG_LIBCXX)
+        add_compile_options("-stdlib=libc++")
+    endif()
+else()
+    option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" OFF)
+endif()
+
+# compiller name for library initilize message
 string(CONCAT CAPSTOMP_CXX_NAME "${CMAKE_CXX_COMPILER_ID}" "-" "${CMAKE_CXX_COMPILER_VERSION}")
 add_definitions(-DCAPSTOMP_CXX_NAME=${CAPSTOMP_CXX_NAME})
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    option(CAPSTOMP_CLANG_LIBCXX "use clang libcxx" OFF)
-    if (CAPSTOMP_CLANG_LIBCXX)
-	add_compile_options("-stdlib=libc++")
-    endif()
-endif()
-
-add_subdirectory(stomptalk)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
-
-option(CAPSTOMP_STATIC_LIBEVENT "add static libevent" OFF)
-if (CAPSTOMP_STATIC_LIBEVENT)
-    set(EVENT__LIBRARY_TYPE "STATIC")
-    add_subdirectory(libevent)
-    include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
-endif()
-
-add_subdirectory(stompconn)
 
 option(CAPSTOMP_HAVE_MY_BOOL "mysql has my_bool type" OFF)
 if (CAPSTOMP_HAVE_MY_BOOL)
@@ -65,7 +59,19 @@ if (CAPSTOMP_TRACE_LOG)
 endif()
 
 add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
-add_definitions("-DHAVE_DLOPEN")
+
+add_subdirectory(stomptalk)
+
+# it for lib stompconn
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
+
+add_subdirectory(stompconn)
+
+if (CAPSTOMP_STATIC_LIBEVENT)
+    set(EVENT__LIBRARY_TYPE "STATIC")
+    add_subdirectory(libevent)
+    include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
+endif()
 
 set(sources
     src/udf.cpp
@@ -77,11 +83,18 @@ set(sources
     src/settings.cpp
 )
 
-include_directories("/usr/include/mysql")
+# include mysql headers
+set(MySQL_INCLUDE_DIRS "/usr/include/mysql")
+if (NOT EXISTS ${MySQL_INCLUDE_DIRS})
+    find_package(PkgConfig)
+    pkg_check_modules(MySQL REQUIRED mysqlclient>=5.7)
+endif()
+
+message(STATUS "MySQL_INCLUDE_DIRS=${MySQL_INCLUDE_DIRS}")
+include_directories(${MySQL_INCLUDE_DIRS})
 
 add_library(capstomp SHARED ${sources})
 
-option(CAPSTOMP_STATIC_STDCPP "static linking of libstdc++" OFF)
 if (CAPSTOMP_STATIC_STDCPP)
     target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a event stomptalk stompconn)
 else()
@@ -120,28 +133,30 @@ if (EXISTS "/etc/os-release")
     endif()
 endif()
 
+set(CAPSTOMP_LIBRARY_DESTINATION "/var/lib/capstomp" CACHE STRING "library installation path")
+
+message(STATUS "CAPSTOMP_LIBRARY_DESTINATION=${CAPSTOMP_LIBRARY_DESTINATION}")
+
 if (CPACK_GENERATOR STREQUAL "DEB")    
-    install(TARGETS capstomp LIBRARY DESTINATION lib/mysql/plugin)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ikonopistsev")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_SECTION main)
     set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${CAPSTOMP_HOME_PAGE})
+    set (CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "dpkg/postinst;dpkg/prerm")
 endif()
 
 if (CPACK_GENERATOR STREQUAL "RPM")
-    install(TARGETS capstomp LIBRARY DESTINATION lib64/mysql/plugin)
-    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib64 /usr/lib64/mysql /usr/lib64/mysql/plugin)
+    install(TARGETS capstomp LIBRARY DESTINATION l${CAPSTOMP_LIBRARY_DESTINATION})
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /var /var/lib)
     set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
     set(CPACK_RPM_PACKAGE_LICENSE "Apache-2.0")
     set(CPACK_RPM_PACKAGE_URL ${CAPSTOMP_HOME_PAGE})
+    SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "rpm/postinst")
+    SET(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "rpm/prerm")
 endif()
 
-if (CPACK_GENERATOR STREQUAL "TGZ")
-    install(TARGETS capstomp LIBRARY DESTINATION ./)
-endif()
-
-message(STATUS "SYSTEM_NAME=${CPACK_SYSTEM_NAME}")
+message(STATUS "CAPSTOMP_SYSTEM_NAME=${CPACK_SYSTEM_NAME}")
 
 include(CPack)
 
