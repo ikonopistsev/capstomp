@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+
+CAPSTOMP_NAME="libcapstomp.so"
+CAPSTOMP_PATH="/usr/lib64/capstomp/$CAPSTOMP_NAME"
+
+if [ ! -f $CAPSTOMP_PATH ]; then
+    for DB_TYPE in "mariadb" "mysql"
+    do
+        for PLUGIN_DIR in "plugin" "plugins"
+        do
+            CAPSTOMP_PATH="/usr/lib64/$DB_TYPE/$PLUGIN_DIR/libcapstomp.so"
+            if [ -L $CAPSTOMP_PATH ]; then
+                rm -v $CAPSTOMP_PATH
+            fi
+        done
+    done
+fi
+
+exit 0
