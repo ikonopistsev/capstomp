@@ -90,7 +90,6 @@ if (NOT EXISTS ${MySQL_INCLUDE_DIRS})
     pkg_check_modules(MySQL REQUIRED mysqlclient>=5.7)
 endif()
 
-message(STATUS "MySQL_INCLUDE_DIRS=${MySQL_INCLUDE_DIRS}")
 include_directories(${MySQL_INCLUDE_DIRS})
 
 add_library(capstomp SHARED ${sources})
@@ -101,7 +100,8 @@ else()
     target_link_libraries(capstomp PRIVATE event stomptalk stompconn)
 endif()
 
-# cpack
+# cpack only for x86_64
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 
 set(CPACK_PACKAGE_VENDOR "ikonopistsev")
 set(CAPSTOMP_HOME_PAGE "https://github.com/ikonopistsev/capstomp")
@@ -133,12 +133,10 @@ if (EXISTS "/etc/os-release")
     endif()
 endif()
 
-set(CAPSTOMP_LIBRARY_DESTINATION "/var/lib/capstomp" CACHE STRING "library installation path")
-
-message(STATUS "CAPSTOMP_LIBRARY_DESTINATION=${CAPSTOMP_LIBRARY_DESTINATION}")
-
 if (CPACK_GENERATOR STREQUAL "DEB")
+    set(CAPSTOMP_LIBRARY_DESTINATION "/usr/lib/capstomp")
     install(TARGETS capstomp LIBRARY DESTINATION ${CAPSTOMP_LIBRARY_DESTINATION})
+
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ikonopistsev")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_SECTION main)
@@ -148,8 +146,10 @@ if (CPACK_GENERATOR STREQUAL "DEB")
 endif()
 
 if (CPACK_GENERATOR STREQUAL "RPM")
+    set(CAPSTOMP_LIBRARY_DESTINATION "/usr/lib64/capstomp")
     install(TARGETS capstomp LIBRARY DESTINATION ${CAPSTOMP_LIBRARY_DESTINATION})
-    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /var /var/lib)
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib64)
+
     set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
     set(CPACK_RPM_PACKAGE_LICENSE "Apache-2.0")
     set(CPACK_RPM_PACKAGE_URL ${CAPSTOMP_HOME_PAGE})
@@ -157,7 +157,10 @@ if (CPACK_GENERATOR STREQUAL "RPM")
     SET(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/rpm/prerm")
 endif()
 
-message(STATUS "CAPSTOMP_SYSTEM_NAME=${CPACK_SYSTEM_NAME}")
+if (CPACK_GENERATOR STREQUAL "TGZ")
+    install(TARGETS capstomp LIBRARY DESTINATION ".")
+endif()
 
 include(CPack)
 
+endif()

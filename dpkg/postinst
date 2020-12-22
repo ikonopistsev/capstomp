@@ -3,29 +3,17 @@
 set -e
 
 CAPSTOMP_TARGET="libcapstomp.so"
-CAPSTOMP_PATH="/var/lib/capstomp/libcapstomp.so"
-
-CAPSTOMP_DB_DIRECTORY="/usr/lib64/mariadb/plugins"
-if [ -d $CAPSTOMP_DB_DIRECTORY ]; then
-    ln -vs $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
-    exit 0
-fi
+CAPSTOMP_PATH="/usr/lib/capstomp/libcapstomp.so"
 
 CAPSTOMP_DB_DIRECTORY="/usr/lib/mariadb/plugins"
 if [ -d $CAPSTOMP_DB_DIRECTORY ]; then
-    ln -vs $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
-    exit 0
-fi
-
-CAPSTOMP_DB_DIRECTORY="/usr/lib64/mysql/plugins"
-if [ -d $CAPSTOMP_DB_DIRECTORY ]; then
-    ln -vs $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
+    ln -vsf $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
     exit 0
 fi
 
 CAPSTOMP_DB_DIRECTORY="/usr/lib/mysql/plugins"
 if [ -d $CAPSTOMP_DB_DIRECTORY ]; then
-    ln -vs $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
+    ln -vsf $CAPSTOMP_PATH "$CAPSTOMP_DB_DIRECTORY/$CAPSTOMP_TARGET"
     exit 0
 fi
 
