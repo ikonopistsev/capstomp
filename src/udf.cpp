@@ -200,23 +200,34 @@ bool capstomp_fill_headers(stompconn::send& frame,
                            UDF_ARGS* args, unsigned int from)
 {
     bool custom_content_type = false;
+    auto arg_count = args->arg_count;
 #ifdef CAPSTOMP_TRACE_LOG
-    if (from < args->arg_count) {
-        capst_journal.trace([]{
-            return std::string("connection: fill headers");
+    if (from < arg_count)
+    {
+
+        capst_journal.trace([=]{
+            std::string text;
+            text += "connection: fill headers from="sv;
+            text += std::to_string(from);
+            text += " arg_count="sv;
+            text += std::to_string(arg_count);
+            return text;
         });
     }
 #endif
-    for (unsigned int i = from; i < args->arg_count; ++i)
+    for (unsigned int i = from; i < arg_count; ++i)
     {
-        auto val_ptr = args->args[i];
-        auto val_size = args->lengths[i];
-        if (val_ptr && val_size)
+        if (args->arg_type[i] == STRING_RESULT)
         {
-            auto rc = capstomp_split_kv_header(frame,
-                val_ptr, val_ptr + val_size);
-            if (rc)
-                custom_content_type = true;
+            auto val_ptr = args->args[i];
+            auto val_size = args->lengths[i];
+            if (val_ptr && val_size)
+            {
+                auto rc = capstomp_split_kv_header(frame,
+                    val_ptr, val_ptr + val_size);
+                if (rc)
+                    custom_content_type = true;
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include "journal.hpp"
 #include <event2/keyvalq_struct.h>
 
 using namespace capst;
@@ -36,19 +37,55 @@ void settings::parse(std::string_view query)
                 {
                     if (with_receipt == key)
                     {
-                        receipt_ = read_bool(val);
+                        auto receipt = read_bool(val);
+
+                        capst_journal.cout([=]{
+                            std::string text;
+                            text += "set receipt = "sv;
+                            text += std::to_string(receipt);
+                            return text;
+                        });
+
+                        receipt_ = receipt;
                     }
                     else if (with_timestamp == key)
                     {
-                        timestamp_ = read_bool(val);
+                        auto timestamp = read_bool(val);
+
+                        capst_journal.cout([=]{
+                            std::string text;
+                            text += "set timestamp = "sv;
+                            text += std::to_string(timestamp);
+                            return text;
+                        });
+
+                        timestamp_ = timestamp;
                     }
                     else if (with_transaction == key)
                     {
-                        transaction_ = read_bool(val);
+                        auto transaction = read_bool(val);
+
+                        capst_journal.cout([=]{
+                            std::string text;
+                            text += "set transaction = "sv;
+                            text += std::to_string(transaction);
+                            return text;
+                        });
+
+                        transaction_ = transaction;
                     }
                     else if (with_persistent == key)
                     {
-                        persistent_ = read_bool(val);
+                        auto persistent = read_bool(val);
+
+                        capst_journal.cout([=]{
+                            std::string text;
+                            text += "set persistent = "sv;
+                            text += std::to_string(persistent);
+                            return text;
+                        });
+
+                        persistent_ = persistent;
                     }
                 }
             }

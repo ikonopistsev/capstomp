@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(capstomp VERSION 2.3.2 LANGUAGES CXX)
+project(capstomp VERSION 2.3.3 LANGUAGES CXX)
 
 set(PROJECT_VERSION_TWEAK 1)
 
@@ -40,9 +40,14 @@ if (CAPSTOMP_HAVE_MY_BOOL)
   add_definitions(-DHAVE_TYPE_MY_BOOL)
 endif()
 
+option(CAPSTOMP_STATE_DEBUG "state of connection" OFF)
+if (CAPSTOMP_STATE_DEBUG)
+  add_definitions(-DCAPSTOMP_STATE_DEBUG)
+endif()
+
 # count of persistent tcp stomp connections per table
 # usualy it one per table (if triggers only)
-set(CAPSTOMP_POOL_SOCKETS "8" CACHE STRING "count of cached soktest in pool")
+set(CAPSTOMP_POOL_SOCKETS "16" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
 
 # number of maximum connections per table (parallel runnig sql querys)

@@ -65,6 +65,10 @@ void connection::close() noexcept
             text.reserve(64);
             text += "connection: close socket="sv;
             text += std::to_string(socket_.fd());
+#ifdef CAPSTOMP_STATE_DEBUG
+            text += ", state="sv;
+            text += std::to_string(state());
+#endif
             return text;
         });
     }
