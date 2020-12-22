@@ -141,10 +141,26 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
     constexpr static std::string_view eq = "="sv;
 
     auto f = std::find_first_of(ptr, end, eq.begin(), eq.end());
-    if (ptr != f)
+    if ((f != end) && (ptr != f))
     {
         std::string_view key(ptr, std::distance(ptr, f++));
         std::string_view val(f, std::distance(f, end));
+
+        if (key.empty() || val.empty())
+        {
+            capst_journal.cout([&]{
+                std::string text;
+                text.reserve(64);
+                text += "invalid header"sv;
+                if (key.size() < 32)
+                {
+                    text += ": "sv;
+                    text += key;
+                }
+                return text;
+            });
+            return custom_content_type;
+        }
 
         using namespace stomptalk;
         using stomptalk::header::detect;
