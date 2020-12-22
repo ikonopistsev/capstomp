@@ -182,7 +182,7 @@ private:
                 if (!packet)
                     error_ = packet.payload().str();
 
-                //trace_packet(packet, receipt_id);
+                trace_packet(packet, std::string());
             });
         }
         else
