@@ -173,8 +173,6 @@ private:
             // запускаем ожидание приема
             receipt_received_ = false;
 
-            // FIXME
-            // return handler id
             stomplay_.add_handler(frame, [&](stompconn::packet packet){
                 // квитанция получена в любом случае
                 receipt_received_ = true;
