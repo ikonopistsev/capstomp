@@ -546,7 +546,6 @@ bool connection::is_receipt() noexcept
         request_count_ >= conf::request_limit() : receipt;
 }
 
-#ifdef CAPSTOMP_TRACE_LOG
 void connection::trace_frame(std::string frame)
 {
     capst_journal.trace([&]{
@@ -558,18 +557,15 @@ void connection::trace_frame(std::string frame)
         return text;
     });
 }
-#endif //
 
-void connection::trace_packet(const stompconn::packet& packet,
-    const std::string& receipt_id)
+void connection::trace_packet(const stompconn::packet& packet)
 {
     if (!packet)
     {
         capst_journal.cerr([&]{
             std::string text;
             text.reserve(64);
-            text += "connection error: receipt:"sv;
-            text += receipt_id;
+            text += "connection error: "sv;
             if (!transaction_id_.empty())
             {
                 text += " transaction:"sv;
@@ -582,7 +578,6 @@ void connection::trace_packet(const stompconn::packet& packet,
     }
     else
     {
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             auto dump = packet.dump();
             std::replace(dump.begin(), dump.end(), '\n', ' ');
@@ -592,7 +587,6 @@ void connection::trace_packet(const stompconn::packet& packet,
             text += dump;
             return text;
         });
-#endif
     }
 }
 

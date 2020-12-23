@@ -91,7 +91,6 @@ void conf::set_verbose(std::size_t value) noexcept
         return text;
     });
 
-
     inst().verbose_ = value;
 
     capst_journal.set_level(static_cast<int>(value));
@@ -162,7 +161,8 @@ extern "C" my_bool capstomp_max_pool_count_init(UDF_INIT* initid,
     if ((arg_count == 1) && (args->arg_type[0] == INT_RESULT) && args->args[0])
     {
         auto new_max_pool_count = *reinterpret_cast<long long*>(args->args[0]);
-        capst::conf::set_max_pool_count(static_cast<std::size_t>(new_max_pool_count));
+        capst::conf::set_max_pool_count(
+            static_cast<std::size_t>(new_max_pool_count));
 
         initid->ptr =
             reinterpret_cast<char*>(static_cast<std::intptr_t>(
@@ -211,8 +211,10 @@ extern "C" my_bool capstomp_max_pool_sockets_init(UDF_INIT* initid,
     auto arg_count = args->arg_count;
     if ((arg_count == 1) && (args->arg_type[0] == INT_RESULT) && args->args[0])
     {
-        auto new_max_pool_sockets = *reinterpret_cast<long long*>(args->args[0]);
-        capst::conf::set_max_pool_sockets(static_cast<std::size_t>(new_max_pool_sockets));
+        auto new_max_pool_sockets =
+            *reinterpret_cast<long long*>(args->args[0]);
+        capst::conf::set_max_pool_sockets(
+            static_cast<std::size_t>(new_max_pool_sockets));
 
         initid->ptr =
             reinterpret_cast<char*>(static_cast<std::intptr_t>(
@@ -262,7 +264,8 @@ extern "C" my_bool capstomp_pool_sockets_init(UDF_INIT* initid,
     if ((arg_count == 1) && (args->arg_type[0] == INT_RESULT) && args->args[0])
     {
         auto new_pool_sockets = *reinterpret_cast<long long*>(args->args[0]);
-        capst::conf::set_pool_sockets(static_cast<std::size_t>(new_pool_sockets));
+        capst::conf::set_pool_sockets(
+            static_cast<std::size_t>(new_pool_sockets));
 
         initid->ptr =
             reinterpret_cast<char*>(static_cast<std::intptr_t>(
@@ -309,7 +312,8 @@ extern "C" my_bool capstomp_request_limit_init(UDF_INIT* initid,
     if ((arg_count == 1) && (args->arg_type[0] == INT_RESULT) && args->args[0])
     {
         auto new_request_limit = *reinterpret_cast<long long*>(args->args[0]);
-        capst::conf::set_request_limit(static_cast<std::size_t>(new_request_limit));
+        capst::conf::set_request_limit(
+            static_cast<std::size_t>(new_request_limit));
 
         initid->ptr =
             reinterpret_cast<char*>(static_cast<std::intptr_t>(

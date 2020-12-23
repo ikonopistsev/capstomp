@@ -14,7 +14,6 @@
 //#define CAPSTOMP_STAPPE_TEST
 //#define CAPSTOMP_THROW_TEST
 
-
 using namespace std::literals;
 
 // журнал работы
@@ -183,7 +182,14 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
 
         frame.push(header::make(key, val));
     }
-
+    else
+    {
+        capst_journal.trace([&]{
+            std::string text;
+            text += "bad header"sv;
+            return text;
+        });
+    }
     return custom_content_type;
 }
 
@@ -197,11 +203,7 @@ bool capstomp_split_kv_header(stompconn::send& frame,
     {
         curr = std::find_first_of(ptr, end, a.begin(), a.end());
         if (ptr != curr)
-        {
-            auto rc = capstomp_fill_kv_header(frame, ptr, curr);
-            if (rc)
-                custom_content_type = true;
-        }
+            custom_content_type |= capstomp_fill_kv_header(frame, ptr, curr);
     }
 
     return custom_content_type;

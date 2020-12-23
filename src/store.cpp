@@ -134,6 +134,7 @@ std::size_t store::commit(const std::string& name)
         throw std::runtime_error("store commit: " + name + " - not found");
 
     auto count = f->second.force_commit();
+
     capst_journal.cout([count]{
         std::string text;
         text.reserve(64);

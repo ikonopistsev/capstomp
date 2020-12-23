@@ -158,12 +158,9 @@ private:
 
     bool is_receipt() noexcept;
 
-#ifdef CAPSTOMP_TRACE_LOG
     void trace_frame(std::string frame);
-#endif //
 
-    void trace_packet(const stompconn::packet& packet,
-                      const std::string& receipt_id);
+    void trace_packet(const stompconn::packet& packet);
 
     template<class T>
     std::size_t send(T frame, bool receipt)
@@ -180,7 +177,7 @@ private:
                 if (!packet)
                     error_ = packet.payload().str();
 
-                trace_packet(packet, std::string());
+                trace_packet(packet);
             });
         }
         else
@@ -188,9 +185,8 @@ private:
             receipt_received_ = true;
         }
 
-#ifdef CAPSTOMP_TRACE_LOG
-        trace_frame(frame.str());
-#endif //
+        if (capst_journal.allow_trace())
+            trace_frame(frame.str());
 
         return send(frame.data());
     }

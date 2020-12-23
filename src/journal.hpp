@@ -52,6 +52,8 @@ public:
 
     void set_level(int level) noexcept;
 
+    bool allow_trace() const noexcept;
+
 private:
     void output(int level, const char *str) const noexcept;
 
