@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://img.shields.io/github/workflow/status/ikonopistsev/capstomp/linux?style=for-the-badge">      
-  <img src="https://img.shields.io/github/license/ikonopistsev/capstomp?style=for-the-badge">
-  <img src="https://img.shields.io/github/stars/ikonopistsev/capstomp?style=for-the-badge">
-  <img src="https://img.shields.io/github/downloads/ikonopistsev/capstomp/total.svg?style=for-the-badge">
+  <a href="https://github.com/ikonopistsev/stomptalk/actions?query=workflow%3Alinux>"><img src="https://img.shields.io/github/workflow/status/ikonopistsev/capstomp/linux?style=for-the-badge" /></a>
+  <a href="https://github.com/ikonopistsev/capstomp/blob/master/LICENSE"><img src="https://img.shields.io/github/license/ikonopistsev/capstomp?style=for-the-badge" /></a>
+  <a href="https://github.com/ikonopistsev/capstomp"><img src="https://img.shields.io/github/stars/ikonopistsev/capstomp?style=for-the-badge" /></a>
+  <a href="https://github.com/ikonopistsev/capstomp/releases"><img src="https://img.shields.io/github/downloads/ikonopistsev/capstomp/total.svg?style=for-the-badge" /></a>
 </p>
 
 # capstomp
