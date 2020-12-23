@@ -82,7 +82,7 @@ Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
 
 ### Build on CentOS 7
 
-1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository.
+1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository
 
 ```
 $ yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -90,7 +90,7 @@ $ yum update
 $ yum install cmake3
 ```
 
-2. You need to install new C++ compiller with C++17 support.
+2. You need to install new C++ compiller with C++17 support
 
 First, install the CentOS SCL release file. It is part of the CentOS extras repository and can be installed by running the following command:
 
@@ -118,7 +118,7 @@ $ gcc --version
 gcc (GCC) 9.3.1 20200408 (Red Hat 9.3.1-2)
 ```
 
-3. Install libevent and mysql development files.
+3. Install libevent and mysql development files
 
 ```
 $ yum install libevent-devel mariadb-devel
@@ -130,7 +130,7 @@ $ yum install libevent-devel mariadb-devel
 $ yum install -y rpm-build
 ```
 
-5. Build.
+5. Build
 
 in capstomp directory 
 
@@ -156,7 +156,7 @@ $ ldd libcapstomp.so
         libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f7da57cb000)
 ```
 
-6. Create rpm package.
+6. Create rpm package
 
 just run cpack3
 
