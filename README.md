@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://github.com/ikonopistsev/capstomp/releases"><img src="https://img.shields.io/github/release/ikonopistsev/capstomp.svg?style=for-the-badge" /></a>
   <a href="https://github.com/ikonopistsev/capstomp/actions?query=workflow%3Alinux>"><img src="https://img.shields.io/github/workflow/status/ikonopistsev/capstomp/linux?label=linux&style=for-the-badge" /></a>
-  <a href=><img alt="LGTM Grade" src="https://img.shields.io/lgtm/grade/cpp/github/ikonopistsev/capstomp?style=for-the-badge" /></a>
+  <a href="https://lgtm.com/projects/g/ikonopistsev/capstomp"><img alt="LGTM Grade" src="https://img.shields.io/lgtm/grade/cpp/github/ikonopistsev/capstomp?style=for-the-badge" /></a>
   <a href="https://github.com/ikonopistsev/capstomp/blob/master/LICENSE"><img src="https://img.shields.io/github/license/ikonopistsev/capstomp?style=for-the-badge" /></a>
 </p>
 
