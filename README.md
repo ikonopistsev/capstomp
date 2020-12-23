@@ -1,4 +1,9 @@
-[![linux](https://github.com/ikonopistsev/capstomp/workflows/linux/badge.svg)](https://github.com/ikonopistsev/capstomp/actions?query=workflow%3Alinux)
+<p align="center">
+  <img src="https://img.shields.io/github/workflow/status/ikonopistsev/capstomp/linux?style=for-the-badge">      
+  <img src="https://img.shields.io/github/license/ikonopistsev/capstomp?style=for-the-badge">
+  <img src="https://img.shields.io/github/stars/ikonopistsev/capstomp?style=for-the-badge">
+  <img src="https://img.shields.io/github/downloads/ikonopistsev/capstomp/total.svg?style=for-the-badge">
+</p>
 
 # capstomp
 
