@@ -29,12 +29,57 @@ Publishes a json `['Hello, World!']` to the `udf` exchange on `localhost:61613` 
 ```
 mysql> SELECT capstomp_json('stomp://guest:guest@localhost/123#/exchange/udf', 'test', json_array('Hello, World!'));
 ```
-this example works with [MySQL json functions](https://dev.mysql.com/doc/refman/8.0/en/json-functions.html)
+this example works with [MySQL 8 json functions](https://dev.mysql.com/doc/refman/8.0/en/json-functions.html)
 
 You may use any json generator for MySQL. I use [my own](https://github.com/ikonopistsev/capjs) :)
 ```
 mysql> SELECT capstomp_json('stomp://guest:guest@localhost:61613/123#/exchange/udf', 'test', jsarr('Hello, World!'));
 ```
+Publish a string 'text' with custom headers
+```
+mysql> SELECT capstomp('stomp://guest:guest@localhost:61613/123#/exchange/udf', '', 'text', 'somekey1=1&some-key2=value');
+```
+Table event's
+The following publishes JSON objects representing table rows whenever a row is inserted, updated, or deleted.
+```
+DROP TABLE IF EXISTS `country`
+;
+CREATE TABLE `country` (
+  `id` int NOT NULL,
+  `name` varchar(100) COLLATE utf8_bin DEFAULT NULL,
+  `inhabitants` int DEFAULT NULL,
+  `continent` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+;
+
+DELIMITER ;;
+
+DROP TRIGGER IF EXISTS `country_AFTER_INSERT`;
+CREATE DEFINER=`root`@`localhost` TRIGGER `country_AFTER_INSERT` AFTER INSERT ON `country` FOR EACH ROW BEGIN
+  	SET @message_size = (
+		capstomp_json('stomp://stompdemo:123@localhost:61613/stompdemo#/queue/a1', '', 
+			JSON_OBJECT('method', 'create', 'payload', JSON_OBJECT('id', NEW.`id`, 'name', NEW.`name`, 'inhabitants', NEW.`inhabitants`, 'continent', NEW.`continent`))));
+END ;;
+
+DROP TRIGGER IF EXISTS `country_AFTER_UPDATE`;
+CREATE DEFINER=`root`@`localhost` TRIGGER `country_AFTER_UPDATE` AFTER UPDATE ON `country` FOR EACH ROW BEGIN
+	SET @message_size = (
+		capstomp_json('stomp://stompdemo:123@localhost:61613/stompdemo#/queue/a1', '', 
+			JSON_OBJECT('method', 'modify', 'payload', JSON_OBJECT('id', NEW.`id`, 'name', NEW.`name`, 'inhabitants', NEW.`inhabitants`, 'continent', NEW.`continent`))));
+END ;;
+
+DROP TRIGGER IF EXISTS `country_AFTER_DELETE`;
+CREATE DEFINER=`root`@`localhost` TRIGGER `country_AFTER_DELETE` AFTER DELETE ON `country` FOR EACH ROW BEGIN
+	SET @message_size = (
+		capstomp_json('stomp://stompdemo:123@localhost:61613/stompdemo#/queue/a1', '', 
+			JSON_OBJECT('method', 'remove', 'payload', JSON_OBJECT('id', OLD.`id`))));
+END ;;
+
+DELIMITER ;
+```
+
+
 
 ## API
 
