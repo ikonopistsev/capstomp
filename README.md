@@ -40,6 +40,7 @@ Publish a string 'text' with custom headers
 mysql> SELECT capstomp('stomp://guest:guest@localhost:61613/123#/exchange/udf', '', 'text', 'somekey1=1&some-key2=value');
 ```
 Table event's
+
 The following publishes JSON objects representing table rows whenever a row is inserted, updated, or deleted.
 ```
 DROP TABLE IF EXISTS `country`
