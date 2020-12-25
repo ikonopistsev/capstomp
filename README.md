@@ -29,7 +29,7 @@ Publishes a json `['Hello, World!']` to the `udf` exchange on `localhost:61613` 
 ```
 mysql> SELECT capstomp_json('stomp://guest:guest@localhost/123#/exchange/udf', 'test', json_array('Hello, World!'));
 ```
-this example works with [MySQL 8 json functions](https://dev.mysql.com/doc/refman/8.0/en/json-functions.html)
+this example works with [MySQL 8 json functions](https://dev.mysql.com/doc/refman/8.0/en/json-function-reference.html)
 
 You may use any json generator for MySQL. I use [my own](https://github.com/ikonopistsev/capjs) :)
 ```
@@ -79,7 +79,6 @@ END ;;
 
 DELIMITER ;
 ```
-
 
 
 ## API
