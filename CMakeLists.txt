@@ -76,6 +76,7 @@ endif()
 
 if (CAPSTOMP_FIND_LIBEVENT)
     find_package(Libevent CONFIG REQUIRED)
+    include_directories(${LIBEVENT_INCLUDE_DIRS})
 endif()
 
 # it for lib stompconn
