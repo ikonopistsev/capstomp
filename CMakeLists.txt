@@ -68,6 +68,7 @@ add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 
 add_subdirectory(stomptalk)
 
+set(LIBEVENT_LIBRARIES "event")
 if (CAPSTOMP_STATIC_LIBEVENT)
     set(EVENT__LIBRARY_TYPE "STATIC")
     add_subdirectory(libevent)
@@ -107,9 +108,9 @@ include_directories(${MySQL_INCLUDE_DIRS})
 add_library(capstomp SHARED ${sources})
 
 if (CAPSTOMP_STATIC_STDCPP)
-    target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a event stomptalk stompconn)
+    target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a ${LIBEVENT_LIBRARIES} stomptalk stompconn)
 else()
-    target_link_libraries(capstomp PRIVATE event stomptalk stompconn)
+    target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn)
 endif()
 
 # cpack only for x86_64
