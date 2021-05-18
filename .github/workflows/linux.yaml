@@ -26,7 +26,7 @@ jobs:
         uses: lukka/run-cmake@v2
         with: 
           buildDirectory: "${{ runner.workspace }}/b/ninja"
-          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON"
+          cmakeAppendedArgs: "-GNinja Multi-Config -DCAPSTOMP_HAVE_MY_BOOL=ON -DCAPSTOMP_FIND_LIBEVENT=ON"
           cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
           cmakeListsTxtPath: "${{ github.workspace }}/CMakeLists.txt"
           useVcpkgToolchainFile: true

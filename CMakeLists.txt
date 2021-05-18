@@ -20,6 +20,7 @@ use_cxx17()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(CAPSTOMP_STATIC_LIBEVENT "static libevent" OFF)
+option(CAPSTOMP_FIND_LIBEVENT "try find libevent" OFF)
 
 # unsing clang libc++ if needed
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -71,6 +72,10 @@ if (CAPSTOMP_STATIC_LIBEVENT)
     set(EVENT__LIBRARY_TYPE "STATIC")
     add_subdirectory(libevent)
     include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
+endif()
+
+if (CAPSTOMP_FIND_LIBEVENT)
+    find_package(Libevent CONFIG REQUIRED)
 endif()
 
 # it for lib stompconn
