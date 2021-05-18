@@ -68,7 +68,6 @@ add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 
 add_subdirectory(stomptalk)
 
-set(LIBEVENT_LIBRARIES "event")
 if (CAPSTOMP_STATIC_LIBEVENT)
     set(EVENT__LIBRARY_TYPE "STATIC")
     add_subdirectory(libevent)
@@ -78,6 +77,9 @@ endif()
 if (CAPSTOMP_FIND_LIBEVENT)
     find_package(Libevent CONFIG REQUIRED)
     include_directories(${LIBEVENT_INCLUDE_DIRS})
+else
+    # just add libevent
+    set(LIBEVENT_LIBRARIES "event")
 endif()
 
 # it for lib stompconn
