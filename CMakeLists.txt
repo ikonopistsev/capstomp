@@ -77,7 +77,7 @@ endif()
 if (CAPSTOMP_FIND_LIBEVENT)
     find_package(Libevent CONFIG REQUIRED)
     include_directories(${LIBEVENT_INCLUDE_DIRS})
-else
+else()
     # just add libevent
     set(LIBEVENT_LIBRARIES "event")
 endif()
