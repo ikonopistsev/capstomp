@@ -47,7 +47,7 @@ struct version
             text += ", stomptalk v"sv;
             text += stomptalk::version();
             text += ", libevent v"sv;
-            text += btpro::queue::version();
+            text += event_get_version();
 #ifndef WIN32
             text += ", mysqld pid="sv;
             text += std::to_string(getpid());
@@ -281,7 +281,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
                 frame.push(stomptalk::header::content_type_json());
         }
 
-        btpro::buffer payload;
+        stompconn::buffer payload;
         payload.append_ref(args->args[2], args->lengths[2]);
         frame.payload(std::move(payload));
 

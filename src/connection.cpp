@@ -618,7 +618,7 @@ std::size_t connection::send_content(stompconn::send frame)
     return rc;
 }
 
-std::size_t connection::send(btpro::buffer data)
+std::size_t connection::send(stompconn::buffer data)
 {
     auto rc = data.size();
     do
@@ -642,7 +642,7 @@ std::size_t connection::send(btpro::buffer data)
 
         if (ev & POLLOUT)
         {
-            auto rc = data.write(socket_);
+            auto rc = data.write(socket_.fd());
             if (btpro::code::fail == rc)
             {
                 // проверяем на блокировку операции

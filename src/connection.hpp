@@ -152,7 +152,7 @@ private:
 
     bool read_stomp(std::string_view marker);
 
-    std::size_t send(btpro::buffer buf);
+    std::size_t send(stompconn::buffer buf);
 
     std::size_t send(stompconn::logon frame);
 
