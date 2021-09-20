@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 
 project(capstomp VERSION 2.4.1 LANGUAGES CXX)
 
-set(PROJECT_VERSION_TWEAK 1)
+set(PROJECT_VERSION_TWEAK 5)
 
 macro(use_cxx17)
   if (CMAKE_VERSION VERSION_LESS "3.8.2")
@@ -20,7 +20,6 @@ use_cxx17()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(CAPSTOMP_STATIC_LIBEVENT "static libevent" OFF)
-option(CAPSTOMP_FIND_LIBEVENT "try find libevent" OFF)
 
 # unsing clang libc++ if needed
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -74,14 +73,6 @@ if (CAPSTOMP_STATIC_LIBEVENT)
     include_directories(libevent/include ${CMAKE_CURRENT_BINARY_DIR}/libevent/include)
 endif()
 
-if (CAPSTOMP_FIND_LIBEVENT)
-    find_package(Libevent CONFIG REQUIRED)
-    include_directories(${LIBEVENT_INCLUDE_DIRS})
-else()
-    # just add libevent
-    set(LIBEVENT_LIBRARIES "event")
-endif()
-
 # it for lib stompconn
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
 
@@ -110,9 +101,17 @@ include_directories(${MySQL_INCLUDE_DIRS})
 add_library(capstomp SHARED ${sources})
 
 if (CAPSTOMP_STATIC_STDCPP)
-    target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a ${LIBEVENT_LIBRARIES} stomptalk stompconn)
+    if (CAPSTOMP_STATIC_LIBEVENT)
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a -lssl stomptalk stompconn event event_openssl)
+    else()
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a -levent -levent_openssl)
+    endif()
 else()
-    target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn)
+    if (CAPSTOMP_STATIC_LIBEVENT)
+        target_link_libraries(capstomp PRIVATE -lssl stomptalk stompconn event event_openssl)
+    else()
+        target_link_libraries(capstomp PRIVATE -levent -levent_openssl stomptalk stompconn)
+    endif()
 endif()
 
 # cpack only for x86_64
