@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 
 project(capstomp VERSION 2.4.1 LANGUAGES CXX)
 
-set(PROJECT_VERSION_TWEAK 5)
+set(PROJECT_VERSION_TWEAK 7)
 
 macro(use_cxx17)
   if (CMAKE_VERSION VERSION_LESS "3.8.2")
