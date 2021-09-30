@@ -16,10 +16,8 @@ protected:
     // use transaction
     bool transaction_{ false };
 
-    // always returng ok
+    // always return ok
     bool no_error_{ false };
-
-    int timeout_{ 0 };
 
     void parse(std::string_view query);
 
@@ -51,11 +49,6 @@ public:
     bool no_error() const noexcept
     {
         return no_error_;
-    }
-
-    int timeout() const noexcept
-    {
-        return timeout_;
     }
 };
 

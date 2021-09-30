@@ -6,10 +6,7 @@ namespace capst {
 
 class conf
 {
-public:
     static constexpr auto timeout_min = std::size_t{300u};
-    
-private:
     static constexpr auto timeout_def = std::size_t{25000u};
     static constexpr auto timeout_max = std::size_t{90000u};
     volatile std::size_t timeout_ = {timeout_def};

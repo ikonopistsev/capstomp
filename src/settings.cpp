@@ -30,7 +30,6 @@ void settings::parse(std::string_view query)
             auto with_persistent = "persistent"sv;
             auto with_transaction = "transaction"sv;
             auto with_no_error = "no_error"sv;
-            auto with_timeout = "timeout"sv;
             for (auto h = hdr.tqh_first; h; h = h->next.tqe_next)
             {
                 auto key = h->key;
@@ -101,20 +100,8 @@ void settings::parse(std::string_view query)
                         });
 #endif
                         no_error_ = no_error;
-                    }
-                    else if (with_timeout == key)
-                    {
-                        auto timeout = std::atoi(val);
-#ifdef CAPSTOMP_TRACE_LOG
-                        capst_journal.trace([=]{
-                            std::string text;
-                            text += "set timeout = "sv;
-                            text += std::to_string(timeout);
-                            return text;
-                        });
-#endif
-                        timeout_ = timeout;
-                    }               }
+                    }           
+                }
             }
             evhttp_clear_headers(&hdr);
         }
