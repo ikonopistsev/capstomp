@@ -175,7 +175,11 @@ void connection::connect(const btpro::uri& u)
         });
 #endif // CAPSTOMP_TRACE_LOG
 
-        connect_sync(socket, addr, static_cast<int>(conf::timeout()));
+        auto timeout = conf_.timeout();
+        if (timeout <= conf::timeout_min)
+            timeout = static_cast<int>(conf::timeout());
+
+        connect_sync(socket, addr, timeout);
 
         socket_ = socket;
 

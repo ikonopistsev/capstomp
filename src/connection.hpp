@@ -132,6 +132,11 @@ public:
         return error_;
     }
 
+    bool with_no_error() const noexcept
+    {
+        return conf_.no_error();
+    }
+
 private:
 
     bool connected();

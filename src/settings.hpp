@@ -16,6 +16,11 @@ protected:
     // use transaction
     bool transaction_{ false };
 
+    // always returng ok
+    bool no_error_{ false };
+
+    int timeout_{ 0 };
+
     void parse(std::string_view query);
 
 public:
@@ -43,6 +48,15 @@ public:
         return persistent_;
     }
 
+    bool no_error() const noexcept
+    {
+        return no_error_;
+    }
+
+    int timeout() const noexcept
+    {
+        return timeout_;
+    }
 };
 
 } // namespace capst

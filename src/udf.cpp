@@ -124,6 +124,10 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
     {
         // закроем сокет, чтобы пометить коннект как не удачный
         conn->close();
+        
+        // но не бдуем его отдавать в пул
+        if (conn->with_no_error())
+            return 0;
 
         // коммитим все зависящие от нас транзакции
         // и возвращаем соединение в пулл
@@ -266,6 +270,16 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
 #endif
     try
     {
+        // если сокет закрыт
+        // значит режим без ошибок
+        if (!conn->good() && conn->with_no_error())
+        {
+            // просто выходим
+            *is_null = 1;
+            *error = 0;
+            return 0;
+        }
+
         std::string destination(conn->destination());
         std::string_view routing_key(args->args[1], args->lengths[1]);
         if (!routing_key.empty())
