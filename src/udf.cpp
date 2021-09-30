@@ -100,14 +100,14 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
         // получаем пулл соединенией
         conn = &store.get(uri);
 
+        // сохраняем
+        initid->ptr = reinterpret_cast<char*>(conn);
+
         // подключаемся либо повтороно используем соединение
         conn->connect(uri);
 
         initid->maybe_null = 0;
         initid->const_item = 0;
-
-        // сохраняем
-        initid->ptr = reinterpret_cast<char*>(conn);
 
         return 0;
     }
@@ -275,7 +275,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         if (!conn->good() && conn->with_no_error())
         {
             // просто выходим
-            *is_null = 1;
+            *is_null = 0;
             *error = 0;
             return 0;
         }
