@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(capstomp VERSION 2.4.2 LANGUAGES CXX)
+project(capstomp VERSION 2.4.3 LANGUAGES CXX)
 
 set(PROJECT_VERSION_TWEAK 1)
 
@@ -111,7 +111,7 @@ if (CAPSTOMP_STATIC_STDCPP)
     if (CAPSTOMP_STATIC_LIBEVENT)
         target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn event)
     else()
-        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a ${LIBEVENT_LIBRARIES})
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn ${LIBEVENT_LIBRARIES})
     endif()
 else()
     if (CAPSTOMP_STATIC_LIBEVENT)
