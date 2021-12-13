@@ -308,6 +308,39 @@ extern "C" char* capstomp_status(UDF_INIT* initid, UDF_ARGS*,
     return nullptr;
 }
 
+extern "C" my_bool capstomp_store_clear_init(UDF_INIT* initid,
+    UDF_ARGS*, char* msg)
+{
+    try
+    {
+        auto& store = capst::store::inst();
+        store.clear();
+
+        initid->maybe_null = 0;
+        initid->const_item = 0;
+
+        return my_bool();
+    }
+    catch (const std::exception& e)
+    {
+        capst_journal.cerr([&]{
+            return std::string(e.what());
+        });
+        snprintf(msg, MYSQL_ERRMSG_SIZE, "%s", e.what());
+    }
+    catch (...)
+    {
+
+        strncpy(msg, ":*(", MYSQL_ERRMSG_SIZE);
+
+        capst_journal.cerr([&]{
+            return ":*(";
+        });
+    }
+
+    return 1;
+}
+
 extern "C" void capstomp_status_deinit(UDF_INIT* initid)
 {
     delete[] initid->ptr;
@@ -321,7 +354,16 @@ extern "C" long long capstomp_store_erase(UDF_INIT*,
     return static_cast<long long>(1);
 }
 
+extern "C" long long capstomp_store_clear(UDF_INIT*,
+    UDF_ARGS*, char*, char*)
+{
+    return static_cast<long long>(1);
+}
+
 extern "C" void capstomp_store_erase_deinit(UDF_INIT*)
+{   }
+
+extern "C" void capstomp_store_clear_deinit(UDF_INIT*)
 {   }
 
 extern "C" long long capstomp_store_commit(UDF_INIT* initid,

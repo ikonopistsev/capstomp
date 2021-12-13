@@ -147,6 +147,7 @@ void connection::connect(const btpro::uri& u)
     set_state(2);
 #endif
 
+    constexpr static auto stomp_def = 61613;
     std::hash<std::string_view> hf;
     auto passhash = hf(u.passcode());
     // проверяем было ли откличючение и совпадает ли пароль
@@ -156,7 +157,6 @@ void connection::connect(const btpro::uri& u)
         close();
         // парсим адрес
         // и коннектимся на новый сокет
-        constexpr static auto stomp_def = 61613;
         btpro::sock_addr addr(u.addr_port(stomp_def));
 
         btpro::socket socket;
@@ -186,6 +186,18 @@ void connection::connect(const btpro::uri& u)
         // сохраняем пароль
         passhash_ = passhash;
     }
+
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: is connnected to "sv;
+            text += u.addr_port(stomp_def);
+            text += " socket="sv;
+            text += std::to_string(socket_.fd());
+            return text;
+        });
+#endif // CAPSTOMP_TRACE_LOG
 
     // начинаем транзакцию
     begin();
@@ -523,6 +535,8 @@ void connection::release()
             text += transaction_id_;
         }
         text += " release"sv;
+        text += " socket="sv;
+        text += std::to_string(socket_.fd());
         return text;
     });
 #endif

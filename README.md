@@ -125,6 +125,25 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DCAPSTOMP_STATIC_LIBEVENT=ON ..
 
 Add `-DCAPSTOMP_HAVE_MY_BOOL=ON` if `my_bool` type is present in `mysql.h`
 
+### Installation 
+
+copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
+
+```
+CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_status RETURNS STRING SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_store_erase RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_store_clear RETURNS INTEGER SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_timeout RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
+CREATE FUNCTION capstomp_verbose RETURNS integer SONAME 'libcapstomp.so';
+```
+
+> Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
+
 ### Build on CentOS 7
 
 1. You need to install cmake3 from [EPEL](https://fedoraproject.org/wiki/EPEL) repository
@@ -270,22 +289,4 @@ cmake -DCAPSTOMP_CLANG_LIBCXX=ON -DCAPSTOMP_HAVE_MY_BOOL=ON -DCMAKE_BUILD_TYPE=R
 ```
 cpack
 ```
-
-### Installation 
-
-copy `libcapstomp.so` to mysql pugins directory (usually to `/usr/lib/mysql/plugin` or same) then import methods
-
-```
-CREATE FUNCTION capstomp RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_json RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_status RETURNS STRING SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_store_erase RETURNS INTEGER SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_timeout RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_max_pool_count RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_max_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_pool_sockets RETURNS integer SONAME 'libcapstomp.so';
-CREATE FUNCTION capstomp_verbose RETURNS integer SONAME 'libcapstomp.so';
-```
-
-> Discription based on [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp)
 
