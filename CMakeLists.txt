@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(capstomp VERSION 2.4.4 LANGUAGES CXX)
+project(capstomp VERSION 2.4.6 LANGUAGES CXX)
 
 set(PROJECT_VERSION_TWEAK 1)
 
@@ -65,6 +65,8 @@ endif()
 
 add_definitions("-DCAPSTOMP_PLUGIN_VERSION=${PROJECT_VERSION}")
 
+add_subdirectory(btdef)
+add_subdirectory(btpro)
 add_subdirectory(stomptalk)
 
 if (CAPSTOMP_STATIC_LIBEVENT)
@@ -81,7 +83,7 @@ else()
 endif()
 
 # it for lib stompconn
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} stomptalk/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # after libevent
 add_subdirectory(stompconn)
@@ -109,15 +111,15 @@ add_library(capstomp SHARED ${sources})
 
 if (CAPSTOMP_STATIC_STDCPP)
     if (CAPSTOMP_STATIC_LIBEVENT)
-        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn event)
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn event btpro btdef)
     else()
-        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn ${LIBEVENT_LIBRARIES})
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn ${LIBEVENT_LIBRARIES} btpro btdef)
     endif()
 else()
     if (CAPSTOMP_STATIC_LIBEVENT)
-        target_link_libraries(capstomp PRIVATE stomptalk stompconn event)
+        target_link_libraries(capstomp PRIVATE stomptalk stompconn event btpro btdef)
     else()
-        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn)
+        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn btpro btdef)
     endif()
 endif()
 

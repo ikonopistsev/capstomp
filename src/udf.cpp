@@ -137,11 +137,20 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
     return 1;
 }
 
+template<class T>
+bool detect(std::string_view key) noexcept
+{
+    constexpr auto text = T::text;
+    constexpr auto text_size = T::text_size;
+    return text_size != key.size() ? false
+        : std::memcmp(text.data(), key.data(), text_size) == 0;
+}
+
 bool capstomp_fill_kv_header(stompconn::send& frame,
                              const char *ptr, const char *end)
 {
     bool custom_content_type = false;
-    constexpr static std::string_view eq = "="sv;
+    constexpr auto eq = "="sv;
 
     auto f = std::find_first_of(ptr, end, eq.begin(), eq.end());
     if ((f != end) && (ptr != f))
@@ -166,11 +175,8 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
         }
 
         using namespace stomptalk;
-        using stomptalk::header::detect;
         using content_type = stomptalk::header::tag::content_type;
-
-        if (detect(content_type(), key))
-            custom_content_type = true;
+        custom_content_type = detect<content_type>(key);
 
 #ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{

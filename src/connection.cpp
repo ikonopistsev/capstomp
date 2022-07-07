@@ -140,6 +140,125 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
     }
 }
 
+btpro::socket try_connect(btpro::ip::addr addr, int timeout) noexcept
+{
+    btpro::socket sock;
+    try
+    {
+        // сокет создается неблокируемым
+        sock.create(addr.family(), btpro::sock_stream);
+        connect_sync(sock, addr, timeout);
+        return sock;
+    }
+    catch(const std::exception& e)
+    {
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: "sv;
+            text += e.what();
+            return text;
+        });
+    }
+    return sock;
+}
+
+btpro::socket try_gethostname_connect(const std::string& host, 
+    const std::string& port, int timeout)
+{
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.trace([&]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: resolve connect to "sv;
+        text += host, text += ':', text += port;
+        return text;
+    });
+#endif // CAPSTOMP_TRACE_LOG
+
+    addrinfo *result = nullptr, *rp = nullptr;
+    addrinfo hints{0, AF_UNSPEC, SOCK_STREAM, 0, 0, nullptr, nullptr, nullptr};
+    auto rc = getaddrinfo(host.c_str(), port.c_str(), &hints, &result);
+    if (0 != rc) 
+    {
+        std::string msg{"getaddrinfo: "sv};
+        msg += host;
+        if (rc == EAI_SYSTEM)
+            throw std::system_error(btpro::net::error_code(), msg);
+        else
+        {
+            std::string text(gai_strerror(rc));
+            text += ' ', text += msg;
+            throw std::runtime_error(text);
+        }
+    }   
+
+    btpro::socket socket;
+    for (rp = result; rp != nullptr; rp = rp->ai_next) 
+    {
+        try
+        {
+            socket = try_connect(btpro::ip::addr::create(rp->ai_addr, rp->ai_addrlen), timeout);
+            if (socket.good())
+                break;
+        }
+        catch(const std::exception& e)
+        {
+            capst_journal.cerr([&]{
+                std::string text;
+                text.reserve(64);
+                text += e.what();
+                text += " getaddrinfo: "sv;
+                text += host, text += ':', text += port;
+                return text;
+            });
+        }
+    }
+
+    if (result)
+        freeaddrinfo(result);
+
+    if (nullptr == rp)
+    {
+        std::string text{"unable to connect getaddrinfo: "sv};
+        text += host;
+        throw std::runtime_error(text);
+    }
+
+    return socket;
+}
+
+btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
+{
+    constexpr auto stomp_def = 61613;
+#ifdef CAPSTOMP_TRACE_LOG
+    capst_journal.trace([&]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: connect to "sv;
+        text += u.addr_port(stomp_def);
+        return text;
+    });
+#endif // CAPSTOMP_TRACE_LOG
+    try
+    {
+        return try_connect(btpro::sock_addr{u.addr_port(stomp_def)}, timeout);
+    }
+    catch (const std::exception& e)
+    {
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            text += "connection: "sv;
+            text += e.what();
+            return text;
+        });
+    }
+
+    return try_gethostname_connect(std::string{u.host()}, 
+            std::to_string(u.port(61613)), timeout);
+}
+
 // подключаемся только на локалхост
 void connection::connect(const btpro::uri& u)
 {
@@ -147,7 +266,6 @@ void connection::connect(const btpro::uri& u)
     set_state(2);
 #endif
 
-    constexpr static auto stomp_def = 61613;
     std::hash<std::string_view> hf;
     auto passhash = hf(u.passcode());
     // проверяем было ли откличючение и совпадает ли пароль
@@ -155,29 +273,9 @@ void connection::connect(const btpro::uri& u)
     {
         // закроем сокет
         close();
-        // парсим адрес
-        // и коннектимся на новый сокет
-        btpro::sock_addr addr(u.addr_port(stomp_def));
 
-        btpro::socket socket;
-        // сокет создается неблокируемым
-        socket.create(addr.family(), btpro::sock_stream);
-
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: connect to "sv;
-            text += u.addr_port(stomp_def);
-            text += " socket="sv;
-            text += std::to_string(socket.fd());
-            return text;
-        });
-#endif // CAPSTOMP_TRACE_LOG
-
-        connect_sync(socket, addr, static_cast<int>(conf::timeout()));
-
-        socket_ = socket;
+        // резолвим адрес если нужно
+        socket_ = create_connection(u, static_cast<int>(conf::timeout()));
 
         destination_ = u.fragment();
 
@@ -188,15 +286,16 @@ void connection::connect(const btpro::uri& u)
     }
 
 #ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: is connnected to "sv;
-            text += u.addr_port(stomp_def);
-            text += " socket="sv;
-            text += std::to_string(socket_.fd());
-            return text;
-        });
+    constexpr auto stomp_def = 61613;
+    capst_journal.trace([&]{
+        std::string text;
+        text.reserve(64);
+        text += "connection: is connnected to "sv;
+        text += u.addr_port(stomp_def);
+        text += " socket="sv;
+        text += std::to_string(socket_.fd());
+        return text;
+    });
 #endif // CAPSTOMP_TRACE_LOG
 
     // начинаем транзакцию

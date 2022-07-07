@@ -56,6 +56,8 @@ private:
 #ifdef CAPSTOMP_STATE_DEBUG
     std::atomic<std::size_t> state_{};
 #endif // CAPSTOMP_STATE_DEBUG
+
+    btpro::socket create_connection(const btpro::uri& u, int timeout);
 public:
 
     connection(pool& pool);
