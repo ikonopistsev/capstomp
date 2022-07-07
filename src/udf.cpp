@@ -9,7 +9,7 @@
 #endif // WIN32
 
 #include "stompconn/version.hpp"
-#include "stomptalk/version.hpp"
+#include "stomptalk/parser.h"
 
 //#define CAPSTOMP_STAPPE_TEST
 //#define CAPSTOMP_THROW_TEST
@@ -45,7 +45,7 @@ struct version
             text += ", stompconn v"sv;
             text += stompconn::version();
             text += ", stomptalk v"sv;
-            text += stomptalk::version();
+            text += stomptalk_version();
             text += ", libevent v"sv;
             text += event_get_version();
 #ifndef WIN32
@@ -174,8 +174,8 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
             return custom_content_type;
         }
 
-        using namespace stomptalk;
-        using content_type = stomptalk::header::tag::content_type;
+        using namespace stompconn;
+        using content_type = stompconn::header::tag::content_type;
         custom_content_type = detect<content_type>(key);
 
 #ifdef CAPSTOMP_TRACE_LOG
@@ -298,7 +298,7 @@ long long capstomp_content(bool json, UDF_INIT* initid, UDF_ARGS* args,
         if (!capstomp_fill_headers(frame, args, 3))
         {
             if (json)
-                frame.push(stomptalk::header::content_type_json());
+                frame.push(stompconn::header::content_type_json());
         }
 
         stompconn::buffer payload;

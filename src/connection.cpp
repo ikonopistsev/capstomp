@@ -710,16 +710,16 @@ std::size_t connection::send_content(stompconn::send frame)
 #endif
     // используем ли таймстамп
     if (conf_.timestamp())
-        frame.push(stomptalk::header::time_since_epoch());
+        frame.push(stompconn::header::time_since_epoch());
 
     if (conf_.persistent())
-        frame.push(stomptalk::header::persistent_on());
+        frame.push(stompconn::header::persistent_on());
 
     auto receipt = is_receipt();
     // используется ли транзакция
     if (!transaction_id_.empty())
     {
-        frame.push(stomptalk::header::transaction(transaction_id_));
+        frame.push(stompconn::header::transaction(transaction_id_));
 
         // подтверждения не используются при между (begin и commit)
         // сбрасываем ожидание подтверждения
