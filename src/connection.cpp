@@ -183,15 +183,39 @@ btpro::socket try_gethostname_connect(const std::string& host,
     {
         std::string msg{"getaddrinfo: "sv};
         msg += host;
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
+            std::string text;
+            text.reserve(64);
+            if (rc == EAI_SYSTEM)
+                text += std::string{"EAI_SYSTEM"sv} + strerror(errno);
+            else
+                text += gai_strerror(rc);
+            text += ' ';
+            text += msg;
+            return text;
+        });
+#endif // CAPSTOMP_TRACE_LOG
+
         if (rc == EAI_SYSTEM)
             throw std::system_error(btpro::net::error_code(), msg);
-        else
-        {
-            std::string text(gai_strerror(rc));
-            text += ' ', text += msg;
-            throw std::runtime_error(text);
-        }
-    }   
+            
+        std::string text(gai_strerror(rc));
+        text += ' ', text += msg;
+        throw std::runtime_error(text);
+    }
+    
+    using holder_type = std::unique_ptr<addrinfo, void(*)(addrinfo*)>;
+    holder_type a(result, [](addrinfo* ptr){
+#ifdef CAPSTOMP_TRACE_LOG
+        capst_journal.trace([&]{
+            std::string text;
+            text += "getaddrinfo: freeaddrinfo"sv;
+            return text;
+        });
+#endif // CAPSTOMP_TRACE_LOG
+        freeaddrinfo(ptr);
+    });
 
     btpro::socket socket;
     for (rp = result; rp != nullptr; rp = rp->ai_next) 
@@ -214,9 +238,6 @@ btpro::socket try_gethostname_connect(const std::string& host,
             });
         }
     }
-
-    if (result)
-        freeaddrinfo(result);
 
     if (nullptr == rp)
     {
