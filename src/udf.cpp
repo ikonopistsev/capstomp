@@ -134,6 +134,11 @@ extern "C" my_bool capstomp_init(UDF_INIT* initid,
         conn->commit();
     }
 
+    capst_journal.cout([&]{
+        std::string text;
+        text += "capstomp_init: 1"sv;
+        return text;
+    });
     return 1;
 }
 

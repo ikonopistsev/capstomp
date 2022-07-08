@@ -182,38 +182,20 @@ btpro::socket try_gethostname_connect(const std::string& host,
     if (0 != rc) 
     {
         std::string msg{"getaddrinfo: "sv};
+        msg += std::to_string(rc);
+        msg += ' ';
         msg += host;
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            if (rc == EAI_SYSTEM)
-                text += std::string{"EAI_SYSTEM"sv} + strerror(errno);
-            else
-                text += gai_strerror(rc);
-            text += ' ';
-            text += msg;
-            return text;
-        });
-#endif // CAPSTOMP_TRACE_LOG
 
         if (rc == EAI_SYSTEM)
             throw std::system_error(btpro::net::error_code(), msg);
             
         std::string text(gai_strerror(rc));
-        text += ' ', text += msg;
+        text += ' '; text += msg;
         throw std::runtime_error(text);
     }
     
     using holder_type = std::unique_ptr<addrinfo, void(*)(addrinfo*)>;
     holder_type a(result, [](addrinfo* ptr){
-#ifdef CAPSTOMP_TRACE_LOG
-        capst_journal.trace([&]{
-            std::string text;
-            text += "getaddrinfo: freeaddrinfo"sv;
-            return text;
-        });
-#endif // CAPSTOMP_TRACE_LOG
         freeaddrinfo(ptr);
     });
 
@@ -233,7 +215,9 @@ btpro::socket try_gethostname_connect(const std::string& host,
                 text.reserve(64);
                 text += e.what();
                 text += " getaddrinfo: "sv;
-                text += host, text += ':', text += port;
+                text += host;
+                text += ':';
+                text += port;
                 return text;
             });
         }
@@ -596,7 +580,9 @@ bool connection::read_stomp(std::string_view marker)
 
 void connection::commit()
 {
-    if (conf_.transaction())
+    // если была транзакиця
+    // пытаемся ее закомитить
+    if (with_transaction())
     {
         auto count = commit(pool_.get_uncommited(transaction_));
         if (count)
