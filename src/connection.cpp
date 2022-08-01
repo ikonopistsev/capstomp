@@ -140,26 +140,12 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
     }
 }
 
-btpro::socket try_connect(btpro::ip::addr addr, int timeout) noexcept
+btpro::socket try_connect(btpro::ip::addr addr, int timeout)
 {
     btpro::socket sock;
-    try
-    {
-        // сокет создается неблокируемым
-        sock.create(addr.family(), btpro::sock_stream);
-        connect_sync(sock, addr, timeout);
-        return sock;
-    }
-    catch(const std::exception& e)
-    {
-        capst_journal.trace([&]{
-            std::string text;
-            text.reserve(64);
-            text += "connection: "sv;
-            text += e.what();
-            return text;
-        });
-    }
+    // сокет создается неблокируемым
+    sock.create(addr.family(), btpro::sock_stream);
+    connect_sync(sock, addr, timeout);
     return sock;
 }
 
@@ -176,7 +162,7 @@ btpro::socket try_gethostname_connect(const std::string& host,
     });
 #endif // CAPSTOMP_TRACE_LOG
 
-    addrinfo *result = nullptr, *rp = nullptr;
+    addrinfo *result = nullptr;
     addrinfo hints{0, AF_UNSPEC, SOCK_STREAM, 0, 0, nullptr, nullptr, nullptr};
     auto rc = getaddrinfo(host.c_str(), port.c_str(), &hints, &result);
     if (0 != rc) 
@@ -199,38 +185,16 @@ btpro::socket try_gethostname_connect(const std::string& host,
         freeaddrinfo(ptr);
     });
 
-    btpro::socket socket;
-    for (rp = result; rp != nullptr; rp = rp->ai_next) 
-    {
-        try
-        {
-            socket = try_connect(btpro::ip::addr::create(rp->ai_addr, rp->ai_addrlen), timeout);
-            if (socket.good())
-                break;
-        }
-        catch(const std::exception& e)
-        {
-            capst_journal.cerr([&]{
-                std::string text;
-                text.reserve(64);
-                text += e.what();
-                text += " getaddrinfo: "sv;
-                text += host;
-                text += ':';
-                text += port;
-                return text;
-            });
-        }
-    }
-
-    if (nullptr == rp)
+    if (nullptr == result)
     {
         std::string text{"unable to connect getaddrinfo: "sv};
         text += host;
         throw std::runtime_error(text);
     }
 
-    return socket;
+    btpro::socket socket;
+    auto addr = btpro::ip::addr::create(result->ai_addr, result->ai_addrlen);
+    return try_connect(std::move(addr), timeout);
 }
 
 btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
@@ -261,7 +225,7 @@ btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
     }
 
     return try_gethostname_connect(std::string{u.host()}, 
-            std::to_string(u.port(61613)), timeout);
+        std::to_string(u.port(61613)), timeout);
 }
 
 // подключаемся только на локалхост
