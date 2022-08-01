@@ -130,7 +130,7 @@ bool socket_ready_write(btpro::socket socket, int timeout)
 void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 {
     auto rc = ::connect(socket.fd(), addr.sa(), addr.size());
-    if (btpro::code::fail != rc)
+    if (btpro::code::fail == rc)
     {
         if (!btpro::socket::inprogress())
             throw std::system_error(btpro::net::error_code(), "::connect");
