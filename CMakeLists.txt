@@ -72,7 +72,8 @@ endif()
 
 option(CAPSTOMP_FIND_LIBEVENT "find libevent package" OFF)
 if (CAPSTOMP_FIND_LIBEVENT)
-    find_package(Libevent CONFIG REQUIRED)
+    set(LIBEVENT_STATIC_LINK TRUE)
+    find_package(Libevent CONFIG REQUIRED COMPONENTS core)
     include_directories(${LIBEVENT_INCLUDE_DIRS})
 endif()
 
@@ -113,7 +114,7 @@ else()
     if (CAPSTOMP_STATIC_LIBEVENT)
         target_link_libraries(capstomp PRIVATE event_core_static stomptalk stompconn btpro btdef)
     else()
-        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIB} stomptalk stompconn btpro btdef)
+        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn btpro btdef)
     endif()
 endif()
 
