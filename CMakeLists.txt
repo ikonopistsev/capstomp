@@ -113,7 +113,7 @@ else()
     if (CAPSTOMP_STATIC_LIBEVENT)
         target_link_libraries(capstomp PRIVATE event_core_static stomptalk stompconn btpro btdef)
     else()
-        target_link_libraries(capstomp PRIVATE event_core stomptalk stompconn btpro btdef)
+        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIB} stomptalk stompconn btpro btdef)
     endif()
 endif()
 
