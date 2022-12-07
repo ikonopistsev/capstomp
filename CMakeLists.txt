@@ -1,23 +1,12 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(capstomp VERSION 2.5.2 LANGUAGES CXX)
+project(capstomp VERSION 2.5.3 LANGUAGES CXX)
 
-set(PROJECT_VERSION_TWEAK 1)
+set(PROJECT_VERSION_RELEASE 1)
 
-macro(use_cxx17)
-  if (CMAKE_VERSION VERSION_LESS "3.8.2")
-    message(STATUS "capstomp enable C++17")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-  else ()
-    set (CMAKE_CXX_STANDARD 17)
-    set (CMAKE_CXX_STANDARD_REQUIRED ON)
-  endif ()
-endmacro(use_cxx17)
-
-# enable C++17 for cmake 3.7
-use_cxx17()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # unsing clang libc++ if needed
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -85,8 +74,6 @@ option(CAPSTOMP_FIND_LIBEVENT "find libevent package" OFF)
 if (CAPSTOMP_FIND_LIBEVENT)
     find_package(Libevent CONFIG REQUIRED)
     include_directories(${LIBEVENT_INCLUDE_DIRS})
-else()
-    set(LIBEVENT_LIBRARIES "-levent")
 endif()
 
 # it for lib stompconn
@@ -124,9 +111,9 @@ if (CAPSTOMP_STATIC_STDCPP)
     endif()
 else()
     if (CAPSTOMP_STATIC_LIBEVENT)
-        target_link_libraries(capstomp PRIVATE stomptalk stompconn event_core_static btpro btdef)
+        target_link_libraries(capstomp PRIVATE event_core_static stomptalk stompconn btpro btdef)
     else()
-        target_link_libraries(capstomp PRIVATE ${LIBEVENT_LIBRARIES} stomptalk stompconn btpro btdef)
+        target_link_libraries(capstomp PRIVATE event_core stomptalk stompconn btpro btdef)
     endif()
 endif()
 
@@ -170,7 +157,7 @@ if (CPACK_GENERATOR STREQUAL "DEB")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ikonopistsev")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_SECTION main)
-    set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
+    set(CPACK_DEBIAN_PACKAGE_RELEASE ${PROJECT_VERSION_RELEASE})
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${CAPSTOMP_HOME_PAGE})
     set (CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/dpkg/postinst;${CMAKE_CURRENT_SOURCE_DIR}/dpkg/prerm")
 endif()
@@ -180,7 +167,7 @@ if (CPACK_GENERATOR STREQUAL "RPM")
     install(TARGETS capstomp LIBRARY DESTINATION ${CAPSTOMP_LIBRARY_DESTINATION})
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST /usr /usr/lib64)
 
-    set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_TWEAK})
+    set(CPACK_RPM_PACKAGE_RELEASE ${PROJECT_VERSION_RELEASE})
     set(CPACK_RPM_PACKAGE_LICENSE "Apache-2.0")
     set(CPACK_RPM_PACKAGE_URL ${CAPSTOMP_HOME_PAGE})
     SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/rpm/postinst")
