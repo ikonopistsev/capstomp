@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 
 project(capstomp VERSION 2.5.3 LANGUAGES CXX)
-
-set(PROJECT_VERSION_RELEASE 1)
+set (PROJECT_VERSION_RELEASE 1)
 
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -106,7 +105,7 @@ add_library(capstomp SHARED ${sources})
 
 if (CAPSTOMP_STATIC_STDCPP)
     if (CAPSTOMP_STATIC_LIBEVENT)
-        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn event btpro btdef)
+        target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a event_core_static stomptalk stompconn btpro btdef)
     else()
         target_link_libraries(capstomp PRIVATE -static-libgcc -static-libstdc++ -l:libstdc++.a stomptalk stompconn ${LIBEVENT_LIBRARIES} btpro btdef)
     endif()
