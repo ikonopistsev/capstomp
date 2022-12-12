@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.18)
 
 project(capstomp VERSION 2.5.3 LANGUAGES CXX)
 set (PROJECT_VERSION_RELEASE 1)
