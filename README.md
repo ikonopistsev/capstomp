@@ -7,7 +7,7 @@
 
 # capstomp
 
-`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [ActiveMQ Artemis](https://activemq.apache.org/components/artemis/) or [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol. Module has very hi performance based on pool of persistent tcp connections. This library is similar to [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp) which is used to publish messages via AMQP directly from MySQL.
+`capstomp` is a [MySQL](https://en.wikipedia.org/wiki/MySQL) user-defined function ([udf](https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-functions.html)) library for sending messages to message brokers like [ActiveMQ Artemis](https://activemq.apache.org/components/artemis/) or [RabbitMQ](https://en.wikipedia.org/wiki/RabbitMQ) using the [STOMP](https://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol) protocol (v1.2). Module has very hi performance based on pool of persistent tcp connections. This library is similar to [lib_mysqludf_amqp](https://github.com/ssimicro/lib_mysqludf_amqp) which is used to publish messages via AMQP directly from MySQL.
 
 To use with the RabbitMQ, the [STOMP plugin](https://www.rabbitmq.com/stomp.html) is required.
 
