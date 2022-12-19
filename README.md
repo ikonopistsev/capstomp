@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/ikonopistsev/capstomp/releases"><img src="https://img.shields.io/github/release/ikonopistsev/capstomp.svg?style=flat-square" /></a>
-  <a href="https://github.com/ikonopistsev/capstomp/actions?query=workflow%3Alinux>"><img src="https://img.shields.io/github/workflow/status/ikonopistsev/capstomp/linux?style=flat-square&label=linux" /></a>
+  <a href="https://github.com/ikonopistsev/capstomp/actions?query=workflow%3Alinux>"><img src="https://img.shields.io/github/actions/workflow/status/ikonopistsev/capstomp/linux.yaml?branch=master&style=flat-square&label=linux" /></a>
   <a href="https://github.com/ikonopistsev/capstomp/blob/master/LICENSE"><img src="https://img.shields.io/github/license/ikonopistsev/capstomp?style=flat-square" /></a>
 </p>
 
