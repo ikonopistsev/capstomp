@@ -236,7 +236,8 @@ void connection::connect(const btpro::uri& u)
 #endif
 
     std::hash<std::string_view> hf;
-    auto passhash = hf(u.passcode());
+    auto [login, passcode] = u.auth();
+    auto passhash = hf(passcode);
     // проверяем было ли откличючение и совпадает ли пароль
     if (!(connected() && (passhash == passhash_)))
     {
@@ -344,7 +345,8 @@ void connection::logon(const btpro::uri& u)
     });
 #endif // CAPSTOMP_TRACE_LOG
 
-    send(stompconn::logon(path, u.user(), u.passcode()));
+    auto [login, passcode] = u.auth();
+    send(stompconn::logon(path, login, passcode));
     read("logon"sv);
 
     // должна быть получена сессия

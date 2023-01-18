@@ -11,15 +11,15 @@ namespace capst {
 std::string endpoint(const btpro::uri& uri)
 {
     // смена пароля приведет к формированию нового пула
-    auto u = uri.user();
+    auto [l, _p] = uri.auth();
     auto a = uri.addr_port(61613);
     auto p = uri.path();
     auto f = uri.fragment();
 
     std::string t;
-    t.reserve(u.size() + a.size() + p.size() + f.size() + 2);
+    t.reserve(l.size() + a.size() + p.size() + f.size() + 2);
 
-    t += u;
+    t += l;
     t += '@';
     t += a;
     t += p;
