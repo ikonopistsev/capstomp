@@ -72,8 +72,10 @@ endif()
 option(CAPSTOMP_FIND_LIBEVENT "find libevent package" OFF)
 if (CAPSTOMP_FIND_LIBEVENT)
     set(LIBEVENT_STATIC_LINK TRUE)
-    find_package(Libevent CONFIG REQUIRED COMPONENTS core)
+    find_package(Libevent CONFIG REQUIRED COMPONENTS core extra)
     include_directories(${LIBEVENT_INCLUDE_DIRS})
+else()
+    set(LIBEVENT_LIBRARIES "-levent_core -levent_extra")
 endif()
 
 # it for lib stompconn
