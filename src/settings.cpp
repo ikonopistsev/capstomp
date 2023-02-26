@@ -40,79 +40,73 @@ void settings::parse(std::string_view query)
                     if (with_receipt == key)
                     {
                         auto receipt = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set receipt = "sv;
                             text += std::to_string(receipt);
                             return text;
                         });
-#endif
+
                         receipt_ = receipt;
                     }
                     else if (with_timestamp == key)
                     {
                         auto timestamp = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set timestamp = "sv;
                             text += std::to_string(timestamp);
                             return text;
                         });
-#endif
+
                         timestamp_ = timestamp;
                     }
                     else if (with_transaction == key)
                     {
                         auto transaction = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set transaction = "sv;
                             text += std::to_string(transaction);
                             return text;
                         });
-#endif
+
                         transaction_ = transaction;
                     }
                     else if (with_persistent == key)
                     {
                         auto persistent = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set persistent = "sv;
                             text += std::to_string(persistent);
                             return text;
                         });
-#endif
+
                         persistent_ = persistent;
                     }
                     else if (with_no_error == key)
                     {
                         auto no_error = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set no_error = "sv;
                             text += std::to_string(no_error);
                             return text;
                         });
-#endif
+
                         no_error_ = no_error;
                     }           
                     else if (with_skip_error == key)
                     {
                         auto no_error = read_bool(val);
-#ifdef CAPSTOMP_TRACE_LOG
                         capst_journal.trace([=]{
                             std::string text;
                             text += "set skip_error = "sv;
                             text += std::to_string(no_error);
                             return text;
                         });
-#endif
+
                         no_error_ = no_error;
                     }  
                 }

@@ -21,7 +21,6 @@ void pool::clear() noexcept
     {
         lock l(mutex_);
 
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -31,7 +30,6 @@ void pool::clear() noexcept
             text += std::to_string(ready_.size());
             return text;
         });
-#endif
         ready_.clear();
     }
     catch (const std::exception& e)
@@ -76,7 +74,6 @@ connection& pool::get(const settings& conf)
     auto i = ready_.begin();
     if (i != ready_.end())
     {
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -88,7 +85,7 @@ connection& pool::get(const settings& conf)
             text += std::to_string(active_.size());
             return text;
         });
-#endif
+
         active_.splice(active_.begin(), ready_, i);
     }
     else
@@ -98,7 +95,6 @@ connection& pool::get(const settings& conf)
             throw std::runtime_error("pool: max pool sockets=" +
                                      std::to_string(max_pool_sockets));
         }
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -110,7 +106,7 @@ connection& pool::get(const settings& conf)
             text += std::to_string(max_pool_sockets);
             return text;
         });
-#endif // CAPSTOMP_TRACE_LOG
+
         active_.emplace_front(*this);
     }
 
@@ -143,7 +139,6 @@ void pool::release_connection(connection_id_type connection_id)
         connection_id->set_state(11);
 #endif
 
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -162,7 +157,6 @@ void pool::release_connection(connection_id_type connection_id)
             }
             return text;
         });
-#endif
 
         // перемещаем соединенеи в список готовых к работе
         ready_.splice(ready_.begin(), active_, connection_id);
@@ -171,7 +165,6 @@ void pool::release_connection(connection_id_type connection_id)
     }
     else
     {
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -190,7 +183,6 @@ void pool::release_connection(connection_id_type connection_id)
             }
             return text;
         });
-#endif
 
         active_.erase(connection_id);
     }
@@ -276,7 +268,6 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
     // прокручиваем лист
     while (i->ready() && (i != e))
     {
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -287,14 +278,13 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
             text += " add commit"sv;
             return text;
         });
-#endif
+
         ++i;
     }
 
     // формируем список транзакций для отправки коммитов
     rc.splice(rc.begin(), transaction_store_, b, i);
 
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
@@ -304,7 +294,6 @@ pool::transaction_store_type pool::get_uncommited(transaction_id_type i)
         text += std::to_string(transaction_store_.size());
         return text;
     });
-#endif
 
     // и возвращаем его
     return rc;

@@ -183,7 +183,6 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
         using content_type = stompconn::header::tag::content_type;
         custom_content_type = detect<content_type>(key);
 
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text.reserve(64);
@@ -193,7 +192,6 @@ bool capstomp_fill_kv_header(stompconn::send& frame,
             text += val;
             return text;
         });
-#endif
 
         frame.push(header::make(key, val));
     }
@@ -234,7 +232,6 @@ bool capstomp_fill_headers(stompconn::send& frame,
 {
     bool custom_content_type = false;
     auto arg_count = args->arg_count;
-#ifdef CAPSTOMP_TRACE_LOG
     if (from < arg_count)
     {
 
@@ -247,7 +244,7 @@ bool capstomp_fill_headers(stompconn::send& frame,
             return text;
         });
     }
-#endif
+
     for (unsigned int i = from; i < arg_count; ++i)
     {
         if (args->arg_type[i] == STRING_RESULT)

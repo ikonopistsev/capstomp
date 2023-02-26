@@ -98,15 +98,8 @@ public:
     }
 
 #ifdef CAPSTOMP_STATE_DEBUG
-    void set_state(std::size_t n)
-    {
-        state_ = n;
-    }
-
-    std::size_t state() const noexcept
-    {
-        return state_;
-    }
+    void set_state(std::size_t n) { state_ = n; }
+    std::size_t state() const noexcept { return state_; }
 #endif // CAPSTOMP_STATE_DEBUG
 
     std::size_t total_count() const noexcept

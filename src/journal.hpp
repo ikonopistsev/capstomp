@@ -40,6 +40,7 @@ public:
     template<class F>
     void trace(F fn) const noexcept
     {
+#ifdef CAPSTOMP_TRACE_LOG
         try
         {
             auto level = trace_level();
@@ -48,6 +49,7 @@ public:
         }
         catch (...)
         {   }
+#endif
     }
 
     void set_level(int level) noexcept;

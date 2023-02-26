@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(capstomp VERSION 2.5.3 LANGUAGES CXX)
+project(capstomp VERSION 2.5.4 LANGUAGES CXX)
 set (PROJECT_VERSION_RELEASE 1)
 
 set (CMAKE_CXX_STANDARD 17)
@@ -35,6 +35,9 @@ endif()
 # usualy it one per table (if triggers only)
 set(CAPSTOMP_POOL_SOCKETS "16" CACHE STRING "count of cached soktest in pool")
 add_definitions("-DCAPSTOMP_POOL_SOCKETS=${CAPSTOMP_POOL_SOCKETS}")
+
+set(CAPSTOMP_REQ_LIMIT "20480" CACHE STRING "number of requests without confirmation")
+add_definitions("-DCAPSTOMP_REQ_LIMIT=${CAPSTOMP_REQ_LIMIT}")
 
 # number of maximum connections per table (parallel runnig sql querys)
 set(CAPSTOMP_MAX_POOL_SOCKETS "250" CACHE STRING "max sockets in pool")

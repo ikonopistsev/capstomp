@@ -38,7 +38,6 @@ pool& store::select_pool(const btpro::uri& u)
     auto f = store_.find(name);
     if (f != store_.end())
     {
-#ifdef CAPSTOMP_TRACE_LOG
         capst_journal.trace([&]{
             std::string text;
             text += "store: use existing "sv;
@@ -47,7 +46,7 @@ pool& store::select_pool(const btpro::uri& u)
             text += std::to_string(store_.size());
             return text;
         });
-#endif
+
         return f->second;
     }
 

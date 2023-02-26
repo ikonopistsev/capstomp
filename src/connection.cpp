@@ -12,6 +12,14 @@ using namespace std::literals;
 
 namespace capst {
 
+constexpr auto stomp_def = 61613;
+
+#ifdef CAPSTOMP_STATE_DEBUG
+#define CAPSTOMP_STATE(x) set_state(x)
+#else
+#define CAPSTOMP_STATE(x) {}
+#endif // CAPSTOMP_STATE_DEBUG
+
 connection::connection(pool& pool)
     : pool_(pool)
 {
@@ -97,7 +105,6 @@ int socket_poll(btpro::socket socket, short int events, int timeout)
     if (btpro::code::fail == rc)
         throw std::system_error(btpro::net::error_code(), "poll");
 
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([socket, events, timeout, revents = ev.revents]{
         std::string text;
         text.reserve(64);
@@ -117,7 +124,6 @@ int socket_poll(btpro::socket socket, short int events, int timeout)
         text += std::to_string(timeout);
         return text;
     });
-#endif
 
     return ev.revents;
 }
@@ -152,7 +158,6 @@ btpro::socket try_connect(btpro::ip::addr addr, int timeout)
 btpro::socket try_gethostname_connect(const std::string& host, 
     const std::string& port, int timeout)
 {
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
@@ -160,7 +165,6 @@ btpro::socket try_gethostname_connect(const std::string& host,
         text += host, text += ':', text += port;
         return text;
     });
-#endif // CAPSTOMP_TRACE_LOG
 
     addrinfo *result = nullptr;
     addrinfo hints{0, AF_UNSPEC, SOCK_STREAM, 0, 0, nullptr, nullptr, nullptr};
@@ -192,15 +196,12 @@ btpro::socket try_gethostname_connect(const std::string& host,
         throw std::runtime_error(text);
     }
 
-    btpro::socket socket;
     auto addr = btpro::ip::addr::create(result->ai_addr, result->ai_addrlen);
     return try_connect(std::move(addr), timeout);
 }
 
 btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
 {
-    constexpr auto stomp_def = 61613;
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
@@ -208,7 +209,7 @@ btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
         text += u.addr_port(stomp_def);
         return text;
     });
-#endif // CAPSTOMP_TRACE_LOG
+
     try
     {
         return try_connect(btpro::sock_addr{u.addr_port(stomp_def)}, timeout);
@@ -225,15 +226,13 @@ btpro::socket connection::create_connection(const btpro::uri& u, int timeout)
     }
 
     return try_gethostname_connect(std::string{u.host()}, 
-        std::to_string(u.port(61613)), timeout);
+        std::to_string(u.port(stomp_def)), timeout);
 }
 
 // подключаемся только на локалхост
 void connection::connect(const btpro::uri& u)
 {
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(2);
-#endif
+    CAPSTOMP_STATE(2);
 
     std::hash<std::string_view> hf;
     auto [login, passcode] = u.auth();
@@ -255,8 +254,6 @@ void connection::connect(const btpro::uri& u)
         passhash_ = passhash;
     }
 
-#ifdef CAPSTOMP_TRACE_LOG
-    constexpr auto stomp_def = 61613;
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
@@ -266,7 +263,6 @@ void connection::connect(const btpro::uri& u)
         text += std::to_string(socket_.fd());
         return text;
     });
-#endif // CAPSTOMP_TRACE_LOG
 
     // начинаем транзакцию
     begin();
@@ -297,7 +293,6 @@ void connection::set(connection_id_type self) noexcept
 
 void connection::set(transaction_id_type id) noexcept
 {
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&, id]{
         std::string text;
         text.reserve(64);
@@ -307,7 +302,6 @@ void connection::set(transaction_id_type id) noexcept
         text += id->id();
         return text;
     });
-#endif
 
     transaction_ = id;
     transaction_id_ = id->id();
@@ -315,21 +309,19 @@ void connection::set(transaction_id_type id) noexcept
 
 void connection::logon(const btpro::uri& u)
 {
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(3);
-#endif
+    CAPSTOMP_STATE(3);
 
     auto path = u.rpath();
 
     if (path.empty())
         path = "/"sv;
 
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
         text += "logon user="sv;
-        text += u.user();
+        auto [user, _p] = u.auth();
+        text += user;
         text += " vhost="sv;
         text += path;
         text += " destination="sv;
@@ -343,7 +335,6 @@ void connection::logon(const btpro::uri& u)
         }
         return text;
     });
-#endif // CAPSTOMP_TRACE_LOG
 
     auto [login, passcode] = u.auth();
     send(stompconn::logon(path, login, passcode));
@@ -356,9 +347,7 @@ void connection::logon(const btpro::uri& u)
 
 void connection::begin()
 {
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(4);
-#endif
+    CAPSTOMP_STATE(4);
 
     ++request_count_;
 
@@ -451,9 +440,8 @@ void connection::commit_transaction(transaction_type& transaction, bool receipt)
 
 std::size_t connection::commit(transaction_store_type transaction_store)
 {
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(8);
-#endif
+    CAPSTOMP_STATE(8);
+
     auto rc = transaction_store.size();
 
     if (rc > 1)
@@ -572,10 +560,8 @@ void connection::commit()
 
             release();
         }
-#ifdef CAPSTOMP_STATE_DEBUG
         else
-            set_state(12);
-#endif
+            CAPSTOMP_STATE(12);
     }
     else
         release();
@@ -596,7 +582,6 @@ void connection::force_commit()
 
 void connection::release()
 {
-#ifdef CAPSTOMP_TRACE_LOG
     capst_journal.trace([&]{
         std::string text;
         text.reserve(64);
@@ -611,10 +596,9 @@ void connection::release()
         text += std::to_string(socket_.fd());
         return text;
     });
-#endif
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(10);
-#endif
+
+    CAPSTOMP_STATE(10);
+
     transaction_id_.clear();
 
     if (request_count_ >= conf::request_limit())
@@ -678,9 +662,8 @@ void connection::trace_packet(const stompconn::packet& packet)
 
 std::size_t connection::send_content(stompconn::send frame)
 {
-#ifdef CAPSTOMP_STATE_DEBUG
-    set_state(6);
-#endif
+    CAPSTOMP_STATE(6);
+
     // используем ли таймстамп
     if (conf_.timestamp())
         frame.push(stompconn::header::time_since_epoch());
