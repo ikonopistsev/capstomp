@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "mysql.hpp"
 #include <string.h>
+#include <cstdint>
 
 namespace capst {
 
