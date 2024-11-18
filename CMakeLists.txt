@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(capstomp VERSION 2.5.4 LANGUAGES CXX)
+project(capstomp VERSION 2.5.5 LANGUAGES CXX)
 set (PROJECT_VERSION_RELEASE 1)
 
 set (CMAKE_CXX_STANDARD 17)
