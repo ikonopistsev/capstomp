@@ -23,9 +23,6 @@ jobs:
             container: ubuntu:24.04
             package_suffix: ubuntu24.04
           # Debian versions  
-          - distro: debian-10
-            container: debian:10
-            package_suffix: debian10
           - distro: debian-11
             container: debian:11
             package_suffix: debian11
