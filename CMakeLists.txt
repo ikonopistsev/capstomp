@@ -101,7 +101,11 @@ set(sources
 set(MySQL_INCLUDE_DIRS "/usr/include/mysql")
 if (NOT EXISTS ${MySQL_INCLUDE_DIRS})
     find_package(PkgConfig)
-    pkg_check_modules(MySQL REQUIRED mysqlclient>=5.7)
+    # Try mysqlclient first (Ubuntu), then mariadb (Debian)
+    pkg_check_modules(MySQL mysqlclient>=5.7)
+    if (NOT MySQL_FOUND)
+        pkg_check_modules(MySQL REQUIRED mariadb>=10.3)
+    endif()
 endif()
 
 include_directories(${MySQL_INCLUDE_DIRS})
