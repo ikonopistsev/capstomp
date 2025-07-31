@@ -18,19 +18,23 @@ jobs:
             container: ubuntu:22.04
             package_suffix: ubuntu22.04
             mysql_package: libmysqlclient-dev
+            my_bool_flag: "OFF"
           - distro: ubuntu-24.04
             container: ubuntu:24.04
             package_suffix: ubuntu24.04
             mysql_package: libmysqlclient-dev
+            my_bool_flag: "OFF"
           # Debian versions  
           - distro: debian-11
             container: debian:11
             package_suffix: debian11
             mysql_package: libmariadb-dev
+            my_bool_flag: "ON"
           - distro: debian-12
             container: debian:12
             package_suffix: debian12
             mysql_package: libmariadb-dev
+            my_bool_flag: "ON"
             
     container: ${{ matrix.container }}
 
@@ -55,7 +59,7 @@ jobs:
           cmake -S . -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCAPSTOMP_HAVE_MY_BOOL=OFF \
+            -DCAPSTOMP_HAVE_MY_BOOL=${{ matrix.my_bool_flag }} \
             -DCAPSTOMP_STATIC_LIBEVENT=OFF \
             -DCPACK_GENERATOR=DEB
 
