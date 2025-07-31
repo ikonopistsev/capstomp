@@ -10,6 +10,7 @@ jobs:
     name: Build DEB for ${{ matrix.distro }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Ubuntu versions
