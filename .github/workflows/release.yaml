@@ -1,0 +1,87 @@
+---
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build for ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Ubuntu versions
+          - distro: ubuntu-20.04
+            container: ubuntu:20.04
+            package_suffix: ubuntu20.04
+          - distro: ubuntu-22.04  
+            container: ubuntu:22.04
+            package_suffix: ubuntu22.04
+          - distro: ubuntu-24.04
+            container: ubuntu:24.04
+            package_suffix: ubuntu24.04
+          # Debian versions  
+          - distro: debian-10
+            container: debian:10
+            package_suffix: debian10
+          - distro: debian-11
+            container: debian:11
+            package_suffix: debian11
+          - distro: debian-12
+            container: debian:12
+            package_suffix: debian12
+            
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Install base dependencies
+        run: |
+          apt-get update
+          apt-get install -y git cmake ninja-build build-essential \
+            libevent-dev pkg-config curl
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCAPSTOMP_HAVE_MY_BOOL=OFF \
+            -DCAPSTOMP_STATIC_LIBEVENT=OFF \
+            -DCPACK_GENERATOR=DEB
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Create DEB package
+        run: |
+          cd build
+          cpack
+
+      - name: List created packages
+        run: |
+          echo "Created packages for ${{ matrix.distro }}:"
+          find build -name "*.deb" | while read file; do
+            echo "  - $(basename "$file")"
+          done
+
+      - name: Upload package to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/*.deb
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
