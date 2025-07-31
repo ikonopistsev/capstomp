@@ -38,7 +38,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y git cmake ninja-build build-essential \
-            libevent-dev pkg-config curl
+            libevent-dev pkg-config curl libmysqlclient-dev
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build build-essential
+          sudo apt-get install -y ninja-build build-essential libmysqlclient-dev
 
       - name: Configure CMake for static build
         run: |
