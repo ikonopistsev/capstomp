@@ -14,22 +14,23 @@ jobs:
       matrix:
         include:
           # Ubuntu versions
-          - distro: ubuntu-20.04
-            container: ubuntu:20.04
-            package_suffix: ubuntu20.04
           - distro: ubuntu-22.04  
             container: ubuntu:22.04
             package_suffix: ubuntu22.04
+            mysql_package: libmysqlclient-dev
           - distro: ubuntu-24.04
             container: ubuntu:24.04
             package_suffix: ubuntu24.04
+            mysql_package: libmysqlclient-dev
           # Debian versions  
           - distro: debian-11
             container: debian:11
             package_suffix: debian11
+            mysql_package: libmariadb-dev
           - distro: debian-12
             container: debian:12
             package_suffix: debian12
+            mysql_package: libmariadb-dev
             
     container: ${{ matrix.container }}
 
@@ -38,7 +39,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y git cmake ninja-build build-essential \
-            libevent-dev pkg-config curl libmysqlclient-dev
+            libevent-dev pkg-config curl file ${{ matrix.mysql_package }}
 
       - name: Checkout
         uses: actions/checkout@v4
