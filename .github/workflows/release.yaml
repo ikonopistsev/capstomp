@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  build-and-release:
-    name: Build for ${{ matrix.distro }}
+  build-deb-packages:
+    name: Build DEB for ${{ matrix.distro }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -80,6 +80,59 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/*.deb
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-static-binary:
+    name: Build Static Binary
+    runs-on: ubuntu-22.04  # Latest LTS
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build build-essential
+
+      - name: Configure CMake for static build
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCAPSTOMP_HAVE_MY_BOOL=OFF \
+            -DCAPSTOMP_STATIC_LIBEVENT=ON \
+            -DCAPSTOMP_STATIC_STDCPP=ON
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Create static archive
+        run: |
+          mkdir -p capstomp-static
+          cp build/libcapstomp.so capstomp-static/
+          cp LICENSE capstomp-static/
+          cp README.md capstomp-static/
+          echo "Static build of capstomp v${{ steps.get_version.outputs.VERSION }}" > capstomp-static/README_STATIC.txt
+          echo "Built with GCC, statically linked libevent and libstdc++" >> capstomp-static/README_STATIC.txt
+          echo "No external dependencies required." >> capstomp-static/README_STATIC.txt
+          tar -czf capstomp-${{ steps.get_version.outputs.VERSION }}-x86_64.tar.gz capstomp-static/
+
+      - name: Upload static archive to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: capstomp-${{ steps.get_version.outputs.VERSION }}-x86_64.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: false
