@@ -149,10 +149,18 @@ void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 btpro::socket try_connect(btpro::ip::addr addr, int timeout)
 {
     btpro::socket sock;
-    // сокет создается неблокируемым
-    sock.create(addr.family(), btpro::sock_stream);
-    connect_sync(sock, addr, timeout);
-    return sock;
+    try
+    {
+        // сокет создается неблокируемым
+        sock.create(addr.family(), btpro::sock_stream);
+        connect_sync(sock, addr, timeout);
+        return sock;
+    }
+    catch (...)
+    {
+        sock.close();
+        throw;
+    }
 }
 
 btpro::socket try_gethostname_connect(const std::string& host, 
