@@ -128,21 +128,31 @@ int socket_poll(btpro::socket socket, short int events, int timeout)
     return ev.revents;
 }
 
-bool socket_ready_write(btpro::socket socket, int timeout)
-{
-    return (POLLOUT & socket_poll(socket, POLLOUT, timeout)) > 0;
-}
-
 void connect_sync(btpro::socket socket, btpro::ip::addr addr, int timeout)
 {
     auto rc = ::connect(socket.fd(), addr.sa(), addr.size());
     if (btpro::code::fail == rc)
     {
         if (!btpro::socket::inprogress())
-            throw std::system_error(btpro::net::error_code(), "::connect");
+            throw std::system_error(btpro::net::error_code(), "connect");
 
-        if (!socket_ready_write(socket, timeout))
+        auto events = socket_poll(socket, POLLOUT, timeout);
+        if (!events)
             throw std::runtime_error("connect timeout");
+
+        // Готовность сокета может означать и ошибку подключения.
+        int error = 0;
+        ev_socklen_t size = sizeof(error);
+        if (btpro::code::fail == ::getsockopt(socket.fd(), SOL_SOCKET, SO_ERROR,
+                reinterpret_cast<char*>(&error), &size))
+            throw std::system_error(btpro::net::error_code(),
+                                    "getsockopt(SO_ERROR) during connect");
+
+        if (error)
+            throw std::system_error(btpro::net::error_code(error), "connect");
+
+        if (!(events & POLLOUT))
+            throw std::runtime_error("connect: socket did not become writable");
     }
 }
 
@@ -524,7 +534,7 @@ bool connection::read_stomp(std::string_view marker)
     auto rc = ::recv(socket_.fd(), input, sizeof(input), 0);
     if (btpro::code::fail == rc)
         throw std::system_error(btpro::net::error_code(),
-                                std::string("recv: ") + marker.data());
+                                std::string("recv during ") + std::string(marker));
 
     // парсим если чтото вычитали
     if (rc)
